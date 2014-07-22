@@ -134,10 +134,11 @@ class RunProcessing(object):
     is then passed over the reporting engine.
     """
 
-    def __init__(self, task_id):
+    def __init__(self, task):
         """@param task_id: ID of the analyses to process."""
-        self.task = Database().view_task(task_id).to_dict()
-        self.analysis_path = os.path.join(CUCKOO_ROOT, "storage", "analyses", str(task_id))
+        # ADI: (We want to preserve changes in task) self.task = Database().view_task(task_id).to_dict()
+	self.task = task.to_dict()
+        self.analysis_path = os.path.join(CUCKOO_ROOT, "storage", "analyses", str(task.id))
         self.cfg = Config(cfg=os.path.join(CUCKOO_ROOT, "conf", "processing.conf"))
 
     def process(self, module):
