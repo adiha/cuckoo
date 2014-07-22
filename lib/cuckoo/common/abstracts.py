@@ -326,6 +326,17 @@ class LibVirtMachinery(Machinery):
         # currently still active.
         super(LibVirtMachinery, self)._initialize_check()
 
+    # ADI
+    def suspend(self, label):
+	log.info("Suspending machine %s" % label)
+	machine = self.vms[label]
+	machine.suspend()
+    # ADI
+    def resume(self, label):
+	log.info("Resuming machine %s" % label)
+	machine = self.vms[label]
+	machine.resume()
+
     def start(self, label):
         """Starts a virtual machine.
         @param label: virtual machine name.
@@ -352,7 +363,7 @@ class LibVirtMachinery(Machinery):
             try:
                 vm = self.vms[label]
                 snapshot = vm.snapshotLookupByName(vm_info.snapshot, flags=0)
-                self.vms[label].revertToSnapshot(snapshot, flags=0)
+                vm.revertToSnapshot(snapshot, flags=0)
             except libvirt.libvirtError:
                 msg = "Unable to restore snapshot {0} on " \
                       "virtual machine {1}".format(vm_info.snapshot, label)
@@ -362,7 +373,8 @@ class LibVirtMachinery(Machinery):
         elif self._get_snapshot(label):
             snapshot = self._get_snapshot(label)
             log.debug("Using snapshot {0} for virtual machine "
-                      "{1}".format(snapshot.getName(), label))
+                      "{1}".format(snapshot, label))
+                      #"{1}".format(snapshot.getName(), label))
             try:
                 self.vms[label].revertToSnapshot(snapshot, flags=0)
             except libvirt.libvirtError:
@@ -567,7 +579,9 @@ class LibVirtMachinery(Machinery):
         # If no current snapshot, get the last one.
         conn = self._connect()
         try:
+	    
             snaps = vm[label].snapshotListNames(flags=0)
+            #snaps = vm.snapshotListNames(flags=0)
 
             def get_create(sn):
                 xml_desc = sn.getXMLDesc(flags=0)
@@ -618,7 +632,8 @@ class Processing(object):
         self.shots_path = os.path.join(self.analysis_path, "shots")
         self.pcap_path = os.path.join(self.analysis_path, "dump.pcap")
         self.pmemory_path = os.path.join(self.analysis_path, "memory")
-        self.memory_path = os.path.join(self.analysis_path, "memory.dmp")
+        self.memory_dumps_dir_path = os.path.join(self.pmemory_path, "dumps")
+	self.excel_results_dir_path = os.path.join(self.pmemory_path, "excels")
 
     def run(self):
         """Start processing.

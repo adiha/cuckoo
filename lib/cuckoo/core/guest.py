@@ -2,19 +2,23 @@
 # This file is part of Cuckoo Sandbox - http://www.cuckoosandbox.org
 # See the file 'docs/LICENSE' for copying permission.
 
+from datetime import datetime
 import os
 import time
 import socket
 import logging
 import xmlrpclib
+import threading
+import json
 from threading import Timer, Event
 from StringIO import StringIO
 from zipfile import ZipFile, ZIP_STORED
 
 from lib.cuckoo.common.config import Config
+from lib.cuckoo.common.constants import CUCKOO_ROOT
 from lib.cuckoo.common.constants import CUCKOO_GUEST_PORT, CUCKOO_GUEST_INIT
 from lib.cuckoo.common.constants import CUCKOO_GUEST_COMPLETED
-from lib.cuckoo.common.constants import CUCKOO_GUEST_FAILED
+from lib.cuckoo.common.constants import CUCKOO_GUEST_FAILED, CUCKOO_DUMP_TRIGGER
 from lib.cuckoo.common.exceptions import CuckooGuestError
 from lib.cuckoo.common.utils import TimeoutServer, sanitize_filename
 
@@ -168,7 +172,7 @@ class GuestManager:
                                            "analysis machine, not enough "
                                            "memory".format(self.id))
 
-            # Launch the analyzer.
+            #ADI: removed: Launch the analyzer.
             pid = self.server.execute()
             log.debug("%s: analyzer started with PID %d", self.id, pid)
         # If something goes wrong when establishing the connection, raise an
@@ -178,7 +182,7 @@ class GuestManager:
                                    "networking or try to increase "
                                    "timeout".format(self.id))
 
-    def wait_for_completion(self):
+    def wait_for_completion(self, machine, storage, machinery):
         """Wait for analysis completion.
         @return: operation status.
         """
@@ -188,23 +192,47 @@ class GuestManager:
         abort = Event()
         abort.clear()
 
-        def die():
-            abort.set()
+        #def die():
+        #    abort.set()
 
-        timer = Timer(self.timeout, die)
-        timer.start()
+        #timer = Timer(self.timeout, die)
+        #timer.start()
         self.server._set_timeout(self.timeout)
-
+	ev = threading.Event("stopevent")
+	sec_counter = 0
+	i = 1
+	time_to_sleep = int(self.cfg.cuckoo.time_to_sleep_before_dump_in_seconds)
+        number_of_dumps = int(self.cfg.cuckoo.max_number_of_dumps)
+        memory_results_dir = os.path.join(storage, "memory")
+        dumps_dir = os.path.join(memory_results_dir, "dumps")
+	try:
+                os.mkdir(memory_results_dir)
+                os.mkdir(dumps_dir)
+	except:
+		pass
         while True:
             time.sleep(1)
-
+	    # ADI
+	    while ev.is_set():
+		time.sleep(1)
             # If the analysis hits the critical timeout, just return straight
             # straight away and try to recover the analysis results from the
             # guest.
-            if abort.is_set():
+            #if abort.is_set():
+	    if sec_counter == self.timeout:
                 raise CuckooGuestError("The analysis hit the critical timeout,"
                                        " terminating")
+	    sec_counter += 1
+	    if (self.cfg.cuckoo.memory_dump) and not self.cfg.cuckoo.triggered_dumps and sec_counter % time_to_sleep == 0:
+                dump_dir = os.path.join(dumps_dir, str(i))
+                os.mkdir(dump_dir)
+		log.info("Dumping memory after %d seconds..." % sec_counter)
+                machinery.dump_memory(machine.label,
+                os.path.join(dump_dir,"memory.dmp" ))
+		info_dict = {"trigger": {"name" : "Time", "args": {"interval" : time_to_sleep}}, "time" : str(sec_counter)}
+            	json.dump(info_dict, file(os.path.join(dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
 
+		i += 1
             try:
                 status = self.server.get_status()
             except Exception as e:
@@ -221,6 +249,7 @@ class GuestManager:
                     error = "unknown error"
 
                 raise CuckooGuestError("Analysis failed: {0}".format(error))
+		# TODO: suspend machine and take dump
             else:
                 log.debug("%s: analysis not completed yet (status=%s)",
                           self.id, status)

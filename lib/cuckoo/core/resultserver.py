@@ -9,6 +9,8 @@ import logging
 import datetime
 import SocketServer
 from threading import Event, Thread
+import json
+import sys
 
 from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
@@ -17,6 +19,8 @@ from lib.cuckoo.common.exceptions import CuckooCriticalError
 from lib.cuckoo.common.exceptions import CuckooResultError
 from lib.cuckoo.common.netlog import NetlogParser, BsonParser
 from lib.cuckoo.common.utils import create_folder, Singleton, logtime
+from lib.cuckoo.core.plugins import list_plugins
+from lib.cuckoo.common.colors import color
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +50,13 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
         self.analysistasks = {}
         self.analysishandlers = {}
 
+	# ADI
+	self.apis = {}
+	self.bps = []
+	self.volshell_bps = []
+	self.times = {}
+	# Initialize times dictionary (for each trigger)
+	self.machinery = None
         try:
             server_addr = self.cfg.resultserver.ip, self.cfg.resultserver.port
             SocketServer.ThreadingTCPServer.__init__(self,
@@ -62,6 +73,50 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
             self.servethread = Thread(target=self.serve_forever)
             self.servethread.setDaemon(True)
             self.servethread.start()
+
+    # ADI
+    def set_machinery(self, machinery):
+	self.machinery = machinery
+
+    # ADI
+    def set_apis(self, id, apis):
+	if not self.apis.has_key(id):
+		self.apis[id] = []
+	self.apis[id] += apis
+    def get_apis(self,id):
+	for api in self.apis[id]:
+		if type(api) != tuple:
+			self.apis[id].remove(api)
+	return self.apis[id]
+    
+    def get_times(self,id, apiname):
+	if not self.times.has_key(id):
+		self.times[id] = {}
+		c = Config(os.path.join(CUCKOO_ROOT, "conf", "triggers.conf"))
+		triggers = [t for t in dir(c) if (not t.startswith("_") or t == "__process__") and t != "get"]
+		for trigger in triggers:
+			times = getattr(c, trigger).times
+			self.times[id][trigger] = 1000 if times == 'unlimited' else int(times)
+
+	return self.times[id][apiname]
+
+    def reduce_times(self, id, apiname):
+	self.times[id][apiname] -= 1
+
+    def remove_from_apis(self, id, val):
+	self.apis[id] = [v for v in self.apis if not v == val]
+
+    def set_volshell_bp(self, api):
+	self.volshell_bps.append(api)
+
+    def get_volshell_bps(self):
+	return self.volshell_bps
+
+    def set_bp(self, api):
+	self.bps.append(api)
+
+    def get_bps(self):
+	return self.bps
 
     def add_task(self, task, machine):
         """Register a task/machine with the Resultserver."""
@@ -122,6 +177,36 @@ class Resulthandler(SocketServer.BaseRequestHandler):
         self.done_event = Event()
         self.pid, self.ppid, self.procname = (None, None, None)
         self.server.register_handler(self)
+
+    def reduce_times(self, apiname):
+	self.server.reduce_times(self.server.analysistasks.values()[0][0].id, apiname)
+
+
+    def set_apis(self, lst):
+	self.server.set_apis(self.server.analysistasks.values()[0][0].id, lst)
+
+    def get_apis(self):
+	return self.server.get_apis(self.server.analysistasks.values()[0][0].id)
+
+    def get_times(self, apiname):
+	return self.server.get_times(self.server.analysistasks.values()[0][0].id, apiname)
+
+
+    def remove_from_apis(self, val):
+	self.server.remove_from_apis(self.server.analysistasks.values()[0][0].id, val)
+
+
+    def set_volshell_bp(self, api):
+	self.server.set_volshell_bp(api)
+
+    def get_volshell_bps(self):
+	return self.server.volshell_bps
+
+    def set_bp(self, api):
+	self.server.set_bp(api)
+
+    def get_bps(self):
+	return self.server.bps
 
     def finish(self):
         self.done_event.set()
@@ -222,6 +307,64 @@ class Resulthandler(SocketServer.BaseRequestHandler):
         if self.rawlogfd:
             self.rawlogfd.close()
         log.debug("Connection closed: {0}:{1}".format(ip, port))
+    # ADI
+    def suspend_machine(self):
+	machine = self.server.analysistasks.values()[0][1].label
+	self.server.machinery.suspend(machine)
+    # ADI
+    def resume_machine(self):
+	machine = self.server.analysistasks.values()[0][1].label
+	self.server.machinery.resume(machine)
+
+    def dump_memory(self, trigger, args):
+	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf"))
+	max_number_of_dumps = int(conf.cuckoo.max_number_of_dumps)
+	chose_triggered = conf.cuckoo.triggered_dumps
+	machine = self.server.analysistasks.values()[0][1].label
+	task_num = self.server.analysistasks.values()[0][0].id
+	if chose_triggered:
+		mem_dir = os.path.join(self.storagepath, "memory", "dumps")
+		try:
+			os.makedirs(mem_dir)
+		except:
+			pass
+		if len(os.listdir(mem_dir)) < max_number_of_dumps:
+			print(color("*** Taking a dump, trigger is %s ***" % trigger, 36))
+			for arg,val in args.iteritems():
+				if arg == "Address":
+					col = 31
+				else:
+					col = 0
+				#if arg == "Buffer":
+				#	try:
+				#		val = val.decode("hex")
+				#	except:
+				#		pass
+				print(color("%s : %s" % (arg, str(val)), col))
+			sys.stdout.flush()
+			if len (os.listdir(mem_dir)) == 0:
+				dump_dir = '1'
+			else:
+				dump_dir = str(int(max(os.listdir(mem_dir))) + 1)
+				#if trigger == "WriteProcessMemory":
+					#prev_info = json.load(file(os.path.join(mem_dir, str(int(max(os.listdir(mem_dir))))) + "//info.json", "rb"))
+					#if prev_info["trigger"] == "WriteProcessMemory" and prev_info["process_handle"] == args["process_handle"]:
+						#dump_dir = str(int(max(os.listdir(mem_dir)))+1)
+			try:
+				os.makedirs(os.path.join(mem_dir, dump_dir))
+			except:	
+				pass
+			dump_path = os.path.join(mem_dir, dump_dir, "memory.dmp")
+			self.server.machinery.dump_memory(machine, dump_path)
+			timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
+			info_dict = {"trigger" : {"name" : trigger, "args" : args}, "time": str(timestamp)}
+			#info_dict.update(args)
+			if trigger == "VirtualProtectEx":
+				import modules.processing.memoryanalysisconsts as memoryanalysisconsts
+				info_dict["Protection_Verbal"] = memoryanalysisconsts.PAGE_PROTECTIONS[int(args['Protection'], 16)]	
+			json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
+		else:
+			log.warn("Reached maximum number of memory dumps. Quitting dump")
 
     def log_process(self, ctx, timestring, pid, ppid, modulepath, procname):
         if not self.pid is None:

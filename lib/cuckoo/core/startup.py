@@ -10,6 +10,7 @@ import urllib
 import urllib2
 import logging
 import logging.handlers
+import threading
 
 import modules.auxiliary
 import modules.processing
@@ -198,3 +199,5 @@ def init_modules():
                 log.debug("\t `-- %s", entry.__name__)
             else:
                 log.debug("\t |-- %s", entry.__name__)
+    # ADI
+    e = threading.Event("stopevent")

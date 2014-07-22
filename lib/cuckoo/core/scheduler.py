@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2014 Cuckoo Sandbox Developers.
+
 # This file is part of Cuckoo Sandbox - http://www.cuckoosandbox.org
 # See the file 'docs/LICENSE' for copying permission.
 
@@ -7,7 +7,12 @@ import time
 import shutil
 import logging
 import Queue
+import json
+import sys
+import md5
+
 from threading import Thread, Lock
+from datetime import datetime
 
 from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
@@ -21,6 +26,14 @@ from lib.cuckoo.core.guest import GuestManager
 from lib.cuckoo.core.plugins import list_plugins, RunAuxiliary, RunProcessing
 from lib.cuckoo.core.plugins import RunSignatures, RunReporting
 from lib.cuckoo.core.resultserver import Resultserver
+from modules.processing.memory import VolatilityManager
+
+
+
+import sys
+import threading
+import time
+from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
@@ -162,11 +175,15 @@ class AnalysisManager(Thread):
                 log.debug("Task #%d: no machine available yet", self.task.id)
                 time.sleep(1)
             else:
+		if machine and not self.task.machine:
+			self.task.machine = machine.name
                 log.info("Task #%d: acquired machine %s (label=%s)",
                          self.task.id, machine.name, machine.label)
                 break
 
         self.machine = machine
+
+	
 
     def build_options(self):
         """Generate analysis options.
@@ -202,22 +219,40 @@ class AnalysisManager(Thread):
 
         log.info("Starting analysis of %s \"%s\" (task=%d)",
                  self.task.category.upper(), self.task.target, self.task.id)
-
         # Initialize the the analysis folders.
         if not self.init_storage():
             return False
-
-        if self.task.category == "file":
-            # Check whether the file has been changed for some unknown reason.
+	if self.task.category == "file":
+	    # Check whether the file has been changed for some unknown reason.
             # And fail this analysis if it has been modified.
-            if not self.check_file():
-                return False
+            	if not self.check_file():
+                	return False
 
             # Store a copy of the original file.
-            if not self.store_file():
-                return False
+                if not self.store_file():
+                        return False
 
-        # Acquire analysis machine.
+
+	    # TODO: Check if this file exists in previous reports.
+	    	file_md5 = md5.md5(file(self.task.target,"rb").read()).digest().encode("hex")
+		analysis_dirs =  os.path.join(CUCKOO_ROOT, "storage", "analyses")
+		previous_report_path = None
+		dirs = sorted([i for i in os.listdir(analysis_dirs) if i.isdigit()], key=int)
+		for analysis_dir in dirs:
+			try:
+				analysis_md5 = md5.md5(file(os.path.join(analysis_dirs, analysis_dir, "binary"),"rb").read()).digest().encode("hex")
+				if analysis_md5 == file_md5:
+					report_path = os.path.join(analysis_dirs, analysis_dir, "reports", "report.html")
+					if os.path.exists(report_path):
+						previous_report_path = report_path
+						break
+			except:
+				pass
+		if previous_report_path != None:
+			new_report = os.path.join(analysis_dirs, str(self.task.id), "reports", "report.html")
+			os.mkdir(os.path.dirname(new_report))
+			shutil.copy(previous_report_path, new_report)
+                    # Acquire analysis machine.
         try:
             self.acquire_machine()
         except CuckooOperationalError as e:
@@ -229,6 +264,7 @@ class AnalysisManager(Thread):
 
         # At this point we can tell the Resultserver about it.
         try:
+	    Resultserver().set_machinery(machinery)
             Resultserver().add_task(self.task, self.machine)
         except Exception as e:
             machinery.release(self.machine.label)
@@ -238,14 +274,15 @@ class AnalysisManager(Thread):
         aux.start()
 
         try:
+	    
             # Mark the selected analysis machine in the database as started.
             guest_log = Database().guest_start(self.task.id,
                                                self.machine.name,
                                                self.machine.label,
                                                machinery.__class__.__name__)
             # Start the machine.
-            machinery.start(self.machine.label)
-        except CuckooMachineError as e:
+            # machinery.start(self.machine.label)
+	except CuckooMachineError as e:
             log.error(str(e), extra={"task_id": self.task.id})
             dead_machine = True
         else:
@@ -256,42 +293,84 @@ class AnalysisManager(Thread):
                 guest.start_analysis(options)
             except CuckooGuestError as e:
                 log.error(str(e), extra={"task_id": self.task.id})
-            else:
-                # Wait for analysis completion.
-                try:
-                    guest.wait_for_completion()
-                    succeeded = True
-                except CuckooGuestError as e:
-                    log.error(str(e), extra={"task_id": self.task.id})
-                    succeeded = False
+                
+	    
+		# Wait for analysis completion.
+	    """
+	    if (self.cfg.cuckoo.memory_dump or self.task.memory) and not self.cfg.cuckoo.triggered_dumps:
+            	try:
+	        	time_to_sleep = int(self.cfg.cuckoo.time_to_sleep_before_dump_in_seconds)
+	        	number_of_dumps = int(self.cfg.cuckoo.max_number_of_dumps)
+                	memory_results_dir = os.path.join(self.storage, "memory")
+                	dumps_dir = os.path.join(memory_results_dir, "dumps")
+	        	os.mkdir(memory_results_dir)
+	        	os.mkdir(dumps_dir)
+			for i in xrange(number_of_dumps):
+		    		log.info("Sleeping %d seconds before taking memory dump %d..." % (time_to_sleep, i+1))
+		    		dump_dir = os.path.join(dumps_dir, str(i+1))
+		    		os.mkdir(dump_dir)
+		    		time.sleep(time_to_sleep)
+		    		machinery.dump_memory(self.machine.label,
+                                          os.path.join(dump_dir,"memory.dmp" ))
+				
+            	except NotImplementedError:
+                	log.error("The memory dump functionality is not available "
+                              "for the current machine manager")
+ 	    
+	    """	
+            try:
+                guest.wait_for_completion(self.machine, self.storage, machinery)
+                succeeded = True
+            except CuckooGuestError as e:
+                log.error(str(e), extra={"task_id": self.task.id})
+                succeeded = False
 
         finally:
+	    # Sleep for 5 secs to let the exe start running on the nachine
+	    #time.sleep(6)
+	    # Take a memory dump of the machine before shutting it off.
+                            #except CuckooMachineError as e:
+                 #   log.error(e)
+		#memory_results_dir = os.path.join(self.storage, "memory")
+                #dumps_dir = os.path.join(memory_results_dir, "dumps")
+		#if os.path.exists(dumps_dir):
+	    
+	    log.info("Taking last dump before terminating...")
+	    mem_dir = os.path.join(self.storage, "memory", "dumps")
+            try:
+            	os.makedirs(mem_dir)
+            except:
+                pass
+            if len (os.listdir(mem_dir)) == 0:
+            	dump_dir = '1'
+            else:
+                dump_dir = str(int(max(os.listdir(mem_dir))) + 1)
+            try:
+                os.makedirs(os.path.join(mem_dir, dump_dir))
+            except:
+                pass
+            dump_path = os.path.join(mem_dir, dump_dir, "memory.dmp")
+	    machinery.dump_memory(self.machine.label, dump_path)
+	    info_dict = {"trigger": {"name" : "End", "args": {}}, "time" : str((datetime.now() - self.task.started_on).seconds)}
+	    json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
+	    
             # Stop Auxiliary modules.
             aux.stop()
 
-            # Take a memory dump of the machine before shutting it off.
-            if self.cfg.cuckoo.memory_dump or self.task.memory:
-                try:
-                    machinery.dump_memory(self.machine.label,
-                                          os.path.join(self.storage, "memory.dmp"))
-                except NotImplementedError:
-                    log.error("The memory dump functionality is not available "
-                              "for the current machine manager")
-                except CuckooMachineError as e:
-                    log.error(e)
-
+             
             try:
                 # Stop the analysis machine.
                 machinery.stop(self.machine.label)
+		machinery.start(self.machine.label)
             except CuckooMachineError as e:
                 log.warning("Unable to stop machine %s: %s",
                             self.machine.label, e)
-
+	    
             # Mark the machine in the database as stopped. Unless this machine
             # has been marked as dead, we just keep it as "started" in the
             # database so it'll not be used later on in this session.
             Database().guest_stop(guest_log)
-
+	    
             # After all this, we can make the Resultserver forget about the
             # internal state for this analysis task.
             Resultserver().del_task(self.task, self.machine)
@@ -324,7 +403,7 @@ class AnalysisManager(Thread):
 
     def process_results(self):
         """Process the analysis results and generate the enabled reports."""
-        results = RunProcessing(task_id=self.task.id).run()
+        results = RunProcessing(task=self.task).run()
         RunSignatures(results=results).run()
         RunReporting(task_id=self.task.id, results=results).run()
 
@@ -369,9 +448,8 @@ class AnalysisManager(Thread):
                     continue
 
                 break
-
             Database().set_status(self.task.id, TASK_COMPLETED)
-
+	    self.task.completed_on = datetime.now() 
             log.debug("Released database task #%d with status %s",
                       self.task.id, success)
 
@@ -439,6 +517,33 @@ class Scheduler:
             raise CuckooCriticalError("No machines available")
         else:
             log.info("Loaded %s machine/s", len(machinery.machines()))
+	for machine in machinery.machines():
+	    	mem_conf_path = os.path.join(CUCKOO_ROOT, "conf", "memory.conf")
+		conf = Config(mem_conf_path)
+		machine.dump_path = ""
+		if (self.cfg.cuckoo.memory_dump or self.task.memory) and conf.memoryanalysis.enabled:
+			log.info("Starting machine %s" % machine.label)
+			machinery.start(machine.label)
+
+			machine.dump_path = os.path.join(CUCKOO_ROOT,
+                                    "storage",
+                                    "analyses",
+				     "%s_clean.dmp" % machine.name)
+			# ADI: take initial memory dump if memory analysis option is enabled
+			log.info("Dumping clean dump of machine: %s" % machine.label)
+			machinery.dump_memory(machine.label, machine.dump_path)
+			# Collect volatility info on clean dump
+			machine.clean_volatility = {}
+                	try:
+				log.info("Running Volatility for clean dump...")
+				vol = VolatilityManager(machine.dump_path)
+				import json
+				mem_analysis, res, res2 = vol.run()
+				machinery.db.set_machine_clean_volatility_data(machine.name, json.dumps(res))
+                	except Exception:
+                    		log.exception("Generic error executing volatility")
+        	else:
+        	    	log.error("Cannot run volatility module: volatility library not available")
 
     def stop(self):
         """Stop scheduler."""
@@ -455,9 +560,7 @@ class Scheduler:
 
         # Message queue with threads to transmit exceptions (used as IPC).
         errors = Queue.Queue()
-
         maxcount = self.cfg.cuckoo.max_analysis_count
-
         # This loop runs forever.
         while self.running:
             time.sleep(1)
@@ -487,7 +590,6 @@ class Scheduler:
             # pending tasks. Loop over.
             if machinery.availables() == 0:
                 continue
-
             # Exits if max_analysis_count is defined in config file and
             # is reached.
             if maxcount and total_analysis_count >= maxcount:

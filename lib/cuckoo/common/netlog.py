@@ -6,6 +6,11 @@ import logging
 import struct
 import datetime
 import string
+import os
+import threading
+import time
+
+from volatility.plugins import volshell
 
 try:
     import bson
@@ -30,9 +35,19 @@ from lib.cuckoo.common.defines import REG_DWORD_LITTLE_ENDIAN
 from lib.cuckoo.common.exceptions import CuckooResultError
 from lib.cuckoo.common.logtbl import table as LOGTBL
 from lib.cuckoo.common.utils import get_filename_from_path
+from lib.cuckoo.common.config import Config
+from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.common.colors import color, yellow
 
 log = logging.getLogger(__name__)
 
+
+# ADI
+def set_event():
+	threading.Event("stopevent").set()
+# ADI
+def clear_event():
+	threading.Event("stopevent").clear()
 
 # should probably prettify this
 def expand_format(fs):
@@ -77,7 +92,7 @@ class NetlogParser(object):
             "r": self.read_registry,
             "R": self.read_registry,
         }
-
+    
     def read_next_message(self):
         apiindex, status = struct.unpack("BB", self.handler.read(2))
         returnval, tid, timediff = struct.unpack("III", self.handler.read(12))
@@ -126,7 +141,7 @@ class NetlogParser(object):
             try:
                 apiname, modulename, parseinfo = LOGTBL[apiindex]
             except IndexError:
-                log.debug("Netlog LOGTBL lookup error for API index {0} "
+                log.error("Netlog LOGTBL lookup error for API index {0} "
                           "(pid={1}, tid={2})".format(apiindex, None, tid))
                 return False
 
@@ -248,14 +263,74 @@ def check_names_for_typeinfo(arginfo):
 
     return argnames, converters
 
+def hh():
+	print yellow("Use the set_bp function to set a new BP, or set_volshell_bp to set a volshell BP")
+
 
 class BsonParser(object):
     def __init__(self, handler):
         self.handler = handler
         self.infomap = {}
-
         if not HAVE_BSON:
             log.critical("Starting BsonParser, but bson is not available! (install with `pip install bson`)")
+    # ADI
+    def execute_trigger_parameters(self, apiname, argdict):
+	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "triggers.conf"))
+	cuckoo_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf"))
+	if cuckoo_conf.cuckoo.triggered_dumps and hasattr(conf, apiname) and getattr(conf, apiname).enabled and hasattr(self.handler, "server") and self.handler.get_times(apiname) > 0:
+		self.handler.reduce_times(apiname)
+		trig_options = getattr(conf, apiname)
+		if trig_options.dump_memory:
+			self.handler.dump_memory(apiname, argdict)
+		if trig_options.break_on_volshell or apiname in self.handler.get_volshell_bps():
+			self.call_volshell()
+		if trig_options.breakpoint or apiname in self.handler.get_bps():
+			self.breakpoint()		
+
+    def breakpoint(self):
+	set_event()
+	self.handler.suspend_machine()
+	print yellow("Run hh() for help")
+	set_bp = self.set_bp
+	set_volshell_bp = self.set_volshell_bp
+	import pdb;pdb.set_trace()
+	self.handler.resume_machine()
+	clear_event()
+
+    def set_bp(self, api):
+	"""
+	Sets a new API breakpoint
+	"""
+	self.handler.set_bp(api)
+    def set_volshell_bp(self, api):
+	"""
+	Sets a new API breakpoint
+	"""
+	self.handler.set_volshell_bp(api)
+
+    def call_volshell(self):
+	set_event()
+	self.handler.suspend_machine()
+	#os.system("sudo vol.py volshell -w -l vmi://XP")
+	log.info("Volshell is ready")
+	#import Tkinter;root=Tkinter.Tk();root.withdraw()
+	#import tkMessageBox
+	#tkMessageBox.showinfo("Volshell","Volshell is ready")
+	
+	"""
+	try:
+		tkSimpleDialog.askstring("title","hi")
+	except:
+		pass
+	
+	tkSimpleDialog.mainloop(0)
+	"""
+	#import pdb;pdb.set_trace()
+	while not os.path.exists("/tmp/marker"):
+		time.sleep(1)
+	os.remove("/tmp/marker")
+	self.handler.resume_machine()
+	clear_event()
 
     def read_next_message(self):
         data = self.handler.read(4)
@@ -323,17 +398,19 @@ class BsonParser(object):
                 return True
 
             apiname, arginfo, argnames, converters, category = self.infomap[index]
-            args = dec.get("args", [])
-
+	    args = dec.get("args", [])
+	    
             if len(args) != len(argnames):
                 log.warning("Inconsistent arg count (compared to arg names) "
                             "on {2}: {0} names {1}".format(dec, argnames,
                                                            apiname))
                 return True
-
             argdict = dict((argnames[i], converters[i](args[i]))
                            for i in range(len(args)))
-
+	    # ADI
+	    if hasattr(self.handler, "set_apis"):
+	    	self.handler.set_apis([(apiname, argdict)])
+	    	#self.apis.append([apiname, argdict])
             if apiname == "__process__":
                 # special new process message from cuckoomon
                 timelow = argdict["TimeLow"]
@@ -350,13 +427,102 @@ class BsonParser(object):
 
                 self.handler.log_process(context, vmtime, pid, ppid,
                                          modulepath, procname)
+		self.execute_trigger_parameters(apiname, argdict)
                 return True
-
-            elif apiname == "__thread__":
+	    elif apiname == "__thread__":
                 pid = argdict["ProcessIdentifier"]
                 self.handler.log_thread(context, pid)
                 return True
-
+	    elif apiname == "VirtualProtectEx":
+		if hasattr(self.handler,"server") and argdict["CurrentProcessId"] != argdict["ProcessId"]:
+			self.execute_trigger_parameters(apiname, argdict)
+ 	    elif apiname == "monitorCPU":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "NtCreateProcess":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "monitorUnpacking":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "UnhookWindowsHookEx":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "StartServiceA" or apiname == "StartServiceW":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "SetWinEventHook":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "socket":
+                self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "SetWindowsHookExW" or apiname == "SetWindowsHookExA":
+	    	self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "ZwLoadDriver":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "NtCreateFile":
+	    	filename = argdict['FileName'].lower()
+	    	if hasattr(self.handler,"server") and (".sys" in filename or not ":\\" in filename) and (not "system32" in filename):
+                        self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "NtCreateMutant":
+		self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "WriteProcessMemory":
+		#pid = argdict.pop('ProcessId')
+		#base = argdict['BaseAddress']
+		argdict['Buffer'] = argdict['Buffer'].encode("hex")
+		#handle = argdict["ProcessHandle"]
+		if argdict["ProcessId"] != argdict["CurrProcessId"]:
+			self.execute_trigger_parameters(apiname, argdict)
+	    elif apiname == "NtResumeThread":
+		if hasattr(self.handler, "server"): #and 'CreateRemoteThread' in self.handler.server.apis:
+                        set_thread_args = None
+                        for api in self.handler.get_apis():
+                        #for api in self.apis:
+			    if type(api) == tuple:
+                                name = api[0]
+                                args = api[1]
+                                if name == 'NtSetContextThread':
+                                        set_thread_args = args
+                                        break
+                        if set_thread_args is not None:
+				if set_thread_args['ThreadHandle'] == argdict['ThreadHandle']:
+					self.execute_trigger_parameters("NtSetContextThread -> NtResumeThread", argdict)
+	    elif apiname == "CreateRemoteThread":
+		write_proc_args = None
+		if hasattr(self.handler, "server"):
+                	for api in self.handler.get_apis():
+                	#for api in self.apis:
+			    if type(api) == tuple:
+                		name = api[0]
+                        	args = api[1]
+                        	if name == 'WriteProcessMemory':
+                        		write_proc_args = args
+                        	        break
+                	if write_proc_args is not None:
+				self.execute_trigger_parameters("WriteProcessMemory -> CreateRemoteThread", argdict)
+                #pid = argdict.pop('ProcessId')
+		
+	    elif apiname == "LdrLoadDll":
+		if hasattr(self.handler, "server"): #and 'CreateRemoteThread' in self.handler.server.apis:
+			write_proc_args = None
+			apis = self.handler.get_apis()
+			for api in apis:
+			#for api in self.apis:
+			    if type(api) == tuple:
+				name = api[0]
+				args = api[1]
+				if name == 'WriteProcessMemory':
+					write_proc_args = args
+					break
+			if write_proc_args is not None:
+				#for api in self.handler.server.apis:
+				for api in apis:
+				    if type(api) == tuple:
+	                                name = api[0]
+	                                args = api[1]
+					if name == "CreateRemoteThread":
+						if args['ProcessHandle'] == write_proc_args['ProcessHandle']:
+							if argdict['ProcessId'] == args['ProcessId']:
+								self.execute_trigger_parameters("WriteProcessMemory -> CreateRemoteThread -> LoadLibrary", argdict)
+								self.handler.remove_from_apis(('WriteProcessMemory', write_proc_args))
+								self.handler.remove_from_apis((name, args))
+								break
+			#self.handler.remove_from_apis(['CreateRemoteThread'])
+            
             context[1] = argdict.pop("is_success", 1)
             context[2] = argdict.pop("retval", 0)
             arguments = argdict.items()

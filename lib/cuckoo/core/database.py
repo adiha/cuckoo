@@ -17,7 +17,7 @@ from lib.cuckoo.common.utils import create_folder, Singleton
 
 try:
     from sqlalchemy import create_engine, Column
-    from sqlalchemy import Integer, String, Boolean, DateTime, Enum
+    from sqlalchemy import Integer, String, Boolean, DateTime, Enum, CLOB
     from sqlalchemy import ForeignKey, Text, Index, Table
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -69,6 +69,7 @@ class Machine(Base):
     status_changed_on = Column(DateTime(timezone=False), nullable=True)
     resultserver_ip = Column(String(255), nullable=False)
     resultserver_port = Column(String(255), nullable=False)
+    clean_volatility = Column(String(), nullable=True)
 
     def __repr__(self):
         return "<Machine('{0}','{1}')>".format(self.id, self.name)
@@ -451,6 +452,22 @@ class Database(object):
             session.rollback()
         finally:
             session.close()
+    # ADI
+    def set_machine_clean_volatility_data(self, machine_name, vol_data):
+        session = self.Session()
+	try:
+		machine = session.query(Machine).filter(Machine.name==machine_name).first()
+		if machine:
+			machine.clean_volatility = vol_data
+			session.commit()
+		else:
+			log.warning('Machine %s not found, cannot set volatility data' % vol_data)
+	except SQLAlchemyError as e:
+                log.debug("Database error setting machine data: {0}".format(e))
+		session.rollback()
+	finally:
+		session.close()
+	
 
     def set_status(self, task_id, status):
         """Set task status.
