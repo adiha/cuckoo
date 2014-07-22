@@ -26,7 +26,7 @@ def main():
     logo()
     check_working_directory()
     check_configs()
-    check_version()
+    #check_version()
     create_structure()
 
     parser = argparse.ArgumentParser()
