@@ -16,7 +16,7 @@ from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
-import lib.cuckcoo.common.utils as utils
+import lib.cuckoo.common.utils as utils
 
 import memoryanalysis
 import memoryanalysisconsts
