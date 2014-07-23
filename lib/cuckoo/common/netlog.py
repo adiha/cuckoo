@@ -275,11 +275,10 @@ class BsonParser(object):
             log.critical("Starting BsonParser, but bson is not available! (install with `pip install bson`)")
     # ADI
     def execute_trigger_parameters(self, apiname, argdict):
-	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "triggers.conf"))
-	cuckoo_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf"))
-	if cuckoo_conf.cuckoo.triggered_dumps and hasattr(conf, apiname) and getattr(conf, apiname).enabled and hasattr(self.handler, "server") and self.handler.get_times(apiname) > 0:
+	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
+	if conf.basic.trigger_based and hasattr(conf, "Trigger_" + apiname) and getattr(conf, "Trigger_" + apiname).enabled and hasattr(self.handler, "server") and self.handler.get_times(apiname) > 0:
 		self.handler.reduce_times(apiname)
-		trig_options = getattr(conf, apiname)
+		trig_options = getattr(conf, "Trigger_" + apiname)
 		if trig_options.dump_memory:
 			self.handler.dump_memory(apiname, argdict)
 		if trig_options.break_on_volshell or apiname in self.handler.get_volshell_bps():

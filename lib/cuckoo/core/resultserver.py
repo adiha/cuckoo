@@ -92,11 +92,11 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
     def get_times(self,id, apiname):
 	if not self.times.has_key(id):
 		self.times[id] = {}
-		c = Config(os.path.join(CUCKOO_ROOT, "conf", "triggers.conf"))
-		triggers = [t for t in dir(c) if (not t.startswith("_") or t == "__process__") and t != "get"]
+		c = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
+		triggers = [t for t in dir(c) if t.startswith("Trigger_")]
 		for trigger in triggers:
 			times = getattr(c, trigger).times
-			self.times[id][trigger] = 1000 if times == 'unlimited' else int(times)
+			self.times[id][trigger.split("Trigger_")[1]] = 1000 if times == 'unlimited' else int(times)
 
 	return self.times[id][apiname]
 
@@ -317,9 +317,9 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 	self.server.machinery.resume(machine)
 
     def dump_memory(self, trigger, args):
-	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf"))
-	max_number_of_dumps = int(conf.cuckoo.max_number_of_dumps)
-	chose_triggered = conf.cuckoo.triggered_dumps
+	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
+	max_number_of_dumps = int(conf.basic.max_number_of_dumps)
+	chose_triggered = conf.basic.trigger_based
 	machine = self.server.analysistasks.values()[0][1].label
 	task_num = self.server.analysistasks.values()[0][0].id
 	if chose_triggered:
@@ -346,10 +346,6 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 				dump_dir = '1'
 			else:
 				dump_dir = str(int(max(os.listdir(mem_dir))) + 1)
-				#if trigger == "WriteProcessMemory":
-					#prev_info = json.load(file(os.path.join(mem_dir, str(int(max(os.listdir(mem_dir))))) + "//info.json", "rb"))
-					#if prev_info["trigger"] == "WriteProcessMemory" and prev_info["process_handle"] == args["process_handle"]:
-						#dump_dir = str(int(max(os.listdir(mem_dir)))+1)
 			try:
 				os.makedirs(os.path.join(mem_dir, dump_dir))
 			except:	
@@ -358,7 +354,6 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 			self.server.machinery.dump_memory(machine, dump_path)
 			timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
 			info_dict = {"trigger" : {"name" : trigger, "args" : args}, "time": str(timestamp)}
-			#info_dict.update(args)
 			if trigger == "VirtualProtectEx":
 				import modules.processing.memoryanalysisconsts as memoryanalysisconsts
 				info_dict["Protection_Verbal"] = memoryanalysisconsts.PAGE_PROTECTIONS[int(args['Protection'], 16)]	

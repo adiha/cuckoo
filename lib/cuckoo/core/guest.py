@@ -201,8 +201,9 @@ class GuestManager:
 	ev = threading.Event("stopevent")
 	sec_counter = 0
 	i = 1
-	time_to_sleep = int(self.cfg.cuckoo.time_to_sleep_before_dump_in_seconds)
-        number_of_dumps = int(self.cfg.cuckoo.max_number_of_dumps)
+	mem_analysis_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
+	time_to_sleep = int(mem_analysis_conf.time_based.time_to_sleep_before_dump_in_seconds)
+        number_of_dumps = int(mem_analysis_conf.basic.max_number_of_dumps)
         memory_results_dir = os.path.join(storage, "memory")
         dumps_dir = os.path.join(memory_results_dir, "dumps")
 	try:
@@ -223,7 +224,7 @@ class GuestManager:
                 raise CuckooGuestError("The analysis hit the critical timeout,"
                                        " terminating")
 	    sec_counter += 1
-	    if (self.cfg.cuckoo.memory_dump) and not self.cfg.cuckoo.triggered_dumps and sec_counter % time_to_sleep == 0:
+	    if (self.cfg.cuckoo.memory_dump) and mem_analysis_conf.basic.time_based and sec_counter % time_to_sleep == 0:
                 dump_dir = os.path.join(dumps_dir, str(i))
                 os.mkdir(dump_dir)
 		log.info("Dumping memory after %d seconds..." % sec_counter)
