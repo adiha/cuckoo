@@ -16,7 +16,7 @@ from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
-import lib.cuckoo.common.utils as utils
+import lib.cuckoo.common.utils as cuckoo_utils
 
 import memoryanalysis
 import memoryanalysisconsts
@@ -465,7 +465,7 @@ class VolatilityAPI(object):
 
        	if dump_dir:
 		self.config.DUMP_DIR = dump_dir
-		utils.create_dir_safe(dump_dir)
+		cuckoo_utils.create_dir_safe(dump_dir)
         if pid:
 		self.config.PID = pid
 	command = self.plugins["procexedump"](self.config)
@@ -492,7 +492,7 @@ class VolatilityAPI(object):
 
        	if dump_dir:
 		self.config.DUMP_DIR = dump_dir
-		utils.create_dir_safe(dump_dir)
+		cuckoo_utils.create_dir_safe(dump_dir)
 	else:
 		dump_dir = tempfile.mkdtemp()
 		self.config.DUMP_DIR = dump_dir
@@ -566,7 +566,7 @@ class VolatilityAPI(object):
 
        	if dump_dir:
 		self.config.DUMP_DIR = dump_dir
-		utils.create_dir_safe(dump_dir)
+		cuckoo_utils.create_dir_safe(dump_dir)
 	if pid:
 		self.config.PID = pid
 	if regex:
@@ -1031,7 +1031,7 @@ class VolatilityAPI(object):
         results = []
         # Create a subdir under the output dir
         if dump_dir and not self.is_clean:
-		utils.create_dir_safe(dump_dir)
+		cuckoo_utils.create_dir_safe(dump_dir)
         command = self.plugins["malfind"](conf)
 	
         for task in command.calculate():
@@ -1544,10 +1544,9 @@ class VolatilityManager(object):
 	
 	mem_analysis = {}
 	new_results = {}
-	if self.voptions.memoryanalysis.enabled:
-		#mem_analysis = memoryanalysis.run_memory_analysis(self.voptions, vol, results, self.memfile.split('/')[-2], self.is_clean, self.clean_data)
-	
-	#	mem_analysis, new_results = memoryanalysis.run_memory_analysis(self.voptions, self.vol, self.results, self.memfile.split('/')[-2], self.is_clean, self.clean_data)
+	conf_path = os.path.join(CUCKOO_ROOT, "conf", "processing.conf")
+        conf = Config(conf_path)	
+	if conf.memoryanalysis.enabled:
 		mem_analysis, new_results = memoryanalysis.MemoryAnalysis(self.voptions, self.vol, self.memfile, self.file_path, self.is_clean, self.clean_data, self.clean_dump).run_memory_analysis()
 		
 

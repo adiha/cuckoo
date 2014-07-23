@@ -468,7 +468,7 @@ class Scheduler:
         else:
             log.info("Loaded %s machine/s", len(machinery.machines()))
 	for machine in machinery.machines():
-	    	mem_conf_path = os.path.join(CUCKOO_ROOT, "conf", "memory.conf")
+	    	mem_conf_path = os.path.join(CUCKOO_ROOT, "conf", "processing.conf")
 		conf = Config(mem_conf_path)
 		machine.dump_path = ""
 		if conf.memoryanalysis.enabled:

@@ -10,7 +10,7 @@ import json
 import logging
 
 from lib.cuckoo.common.config import Config
-from lib.cuckoo.common.utils as utils
+import lib.cuckoo.common.utils as utils
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from modules.processing.static import PortableExecutable
 
@@ -366,8 +366,6 @@ class MemoryAnalysis(object):
 	def diff_static_analysis(self, old, new, deps, show_new_imports=False):
 		results = {}
 		
-		#conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memory.conf"))
-		#show_new_imports = conf.diff_static_analysis.show_new_imports	
 		res = self.static_analyze_new_exe(old, new, deps, True)
 		if len(res) == 0:
 			return results
@@ -453,7 +451,7 @@ class MemoryAnalysis(object):
 		return smart_analysis, plugins
 
 	def run_memory_plugin(self, mem_analysis, memfunc, clean, new_results, **attrs):
-		conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memory.conf"))
+		conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 		desc = getattr(conf, memfunc).desc
 		deps = memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
 		if memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS.has_key(memfunc):

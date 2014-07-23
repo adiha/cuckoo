@@ -59,6 +59,15 @@ def delete_folder(folder):
             raise CuckooOperationalError("Unable to delete folder: "
                                          "{0}".format(folder))
 
+def create_dir_safe(folder):
+	"""Creates a directory. 
+	Won't cause an exception if directory aleready exists.
+	"""
+	try:
+		os.mkdir(folder)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
 
 # don't allow all characters in "string.printable", as newlines, carriage
 # returns, tabs, \x0b, and \x0c may mess up reports
