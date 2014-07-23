@@ -10,6 +10,7 @@ import json
 import logging
 
 from lib.cuckoo.common.config import Config
+from lib.cuckoo.common.utils as utils
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from modules.processing.static import PortableExecutable
 
@@ -17,7 +18,6 @@ import modules.processing.memory
 import modules.processing.virustotal as vt
 
 from volatility.plugins import volshell
-from volatility import utils
 import volatility.plugins.vadinfo as vadinfo
 
 import distorm3
@@ -182,7 +182,6 @@ class MemoryAnalysis(object):
 		if dump_dir is not None:
                 	for new_mal in new_mals:
 				name = "process.{0:#x}.{1:#x}.dmp".format(new_mal["offset"], int(new_mal["vad_start"],16))
-                        	#shutil.copy(new["malfind"]["config"]["dump_dir"] + '//' + name, malfinds_dir + name)
                         	try:
 					shutil.copy(dump_dir + '//' + name, malfinds_dir + name)
 				except:
@@ -444,7 +443,7 @@ class MemoryAnalysis(object):
 	def parse_trigger_plugins(self, trigger):
 		smart_analysis = False
 		plugins = []
-		conf = Config(os.path.join(os.path.join(CUCKOO_ROOT, "conf", "triggers.conf")))
+		conf = Config(os.path.join(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf")))
 		if hasattr(conf, trigger):
 			trig_opts = getattr(conf, trigger)
 			if trig_opts.run_smart_plugins:
@@ -484,12 +483,9 @@ class MemoryAnalysis(object):
                 malfinds_dir = os.path.join(os.path.dirname(self.memfile), "malfinds")
 
 		if not self.is_clean:
-			try:
-                         	os.mkdir(dlls_dir)
-				os.mkdir(drivers_dir)
-				os.mkdir(malfinds_dir)
-                        except:
-                        	pass
+                        utils.create_dir_safe(dlls_dir)
+			utils.create_dir_safe(drivers_dir)
+			utils.create_dir_safe(malfinds_dir)
 
         	for mem_analysis_name, dependencies in memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
 			attrs = getattr(self.voptions, mem_analysis_name)
@@ -497,10 +493,8 @@ class MemoryAnalysis(object):
 				log.info("Running plugin: %s" % mem_analysis_name)
 				attrs.pop("enabled")
 				desc = attrs.pop("desc")
-				try:
+				if attrs.has_key("filter"):
 					attrs.pop("filter")
-				except:
-					pass
 				if self.is_clean:
                                 	self.results = self.run_dependencies(self.results, dependencies, **attrs)
                         	else:
@@ -529,9 +523,6 @@ class MemoryAnalysis(object):
 			clean_vol = modules.processing.memory.VolatilityAPI(self.clean_dump)
 
 
-		#if plugins_to_run != []:
-		#	for plugin in plugins_to_run:
-		#		run_simple_plugin(mem_analysis, plugin)
 			if smart_analysis:
 			    if memoryanalysisconsts.TRIGGER_PLUGINS.has_key(trigger):
 				for plugin in memoryanalysisconsts.TRIGGER_PLUGINS[trigger]:
@@ -579,10 +570,7 @@ class MemoryAnalysis(object):
 				mem_analysis["diffs"]["diff_malfind"]["star"] = "yes"
 		    	    elif trigger == "WriteProcessMemory -> CreateRemoteThread -> LoadLibrary":
 			 	resdir = os.path.join(os.path.dirname(self.memfile), "dlls")
-                                try:
-                                	os.mkdir(resdir)
-                                except:
-                                        pass	
+                                create_dir_safe(resdir)
 				pid = str(args["ProcessId"])
 				base = int(args["BaseAddress"], 16)
 				

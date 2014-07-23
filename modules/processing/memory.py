@@ -16,6 +16,7 @@ from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
+import lib.cuckcoo.common.utils as utils
 
 import memoryanalysis
 import memoryanalysisconsts
@@ -463,11 +464,8 @@ class VolatilityAPI(object):
         self.__config()
 
        	if dump_dir:
-		try:
-			self.config.DUMP_DIR = dump_dir
-			os.mkdir(dump_dir)
-		except OSError:
-			pass
+		self.config.DUMP_DIR = dump_dir
+		utils.create_dir_safe(dump_dir)
         if pid:
 		self.config.PID = pid
 	command = self.plugins["procexedump"](self.config)
@@ -493,11 +491,8 @@ class VolatilityAPI(object):
         self.__config()
 
        	if dump_dir:
-		try:
-			self.config.DUMP_DIR = dump_dir
-			os.mkdir(dump_dir)
-		except OSError:
-			pass
+		self.config.DUMP_DIR = dump_dir
+		utils.create_dir_safe(dump_dir)
 	else:
 		dump_dir = tempfile.mkdtemp()
 		self.config.DUMP_DIR = dump_dir
@@ -570,11 +565,8 @@ class VolatilityAPI(object):
         self.__config()
 
        	if dump_dir:
-		try:
-			self.config.DUMP_DIR = dump_dir
-			os.mkdir(dump_dir)
-		except OSError:
-			pass
+		self.config.DUMP_DIR = dump_dir
+		utils.create_dir_safe(dump_dir)
 	if pid:
 		self.config.PID = pid
 	if regex:
@@ -1039,11 +1031,7 @@ class VolatilityAPI(object):
         results = []
         # Create a subdir under the output dir
         if dump_dir and not self.is_clean:
-            #malfind_dir = os.path.join(dump_dir, "malfind")
-            try:
-		os.mkdir(dump_dir)
-	    except:
-		pass
+		utils.create_dir_safe(dump_dir)
         command = self.plugins["malfind"](conf)
 	
         for task in command.calculate():
