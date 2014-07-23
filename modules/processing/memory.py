@@ -114,17 +114,6 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=list(set(results)))
 
-    def slow_strings(self):
-	"""
-	Finds the list of strings in the dump and their related processes.
-	"""
-	strings_command = "wine strings.exe -q -o %s > %s" % (self.memdump, "/tmp/strings") 
-	os.popen(strings_command)
-
-	# Call strings plugin with the output.
-	# TODO: wrap strings plugin.
-	return self.volstrings()
-
     # ADI
     def find_strings(self, strs, lst):
 	"""
@@ -174,7 +163,6 @@ class VolatilityAPI(object):
 	scanner, addr_space = command.calculate()
 	resfile = tempfile.mktemp()
 	patches = scanner.scan(addr_space, file(resfile, 'wb'))
-	print patches
 	res = file(resfile,"rb").read()
 	os.remove(resfile)
 	return dict(config={}, patches=patches, data=[res])
@@ -613,35 +601,13 @@ class VolatilityAPI(object):
 	"""
 	Searches for modified PE header using yara signature.
 	"""
-	#rule =  'rule modified_pe_header {strings: $msg = "This program cannot" condition: ((not uint16(0) == 0x5A4D) and $msg) or ((not $msg) and uint16(0) == 0x5A4D) }'
 	rule =  'rule modified_pe_header {strings: $msg = "This program cannot" condition: ((not uint16(0) == 0x5A4D) and $msg)}'
-	#rule =  'rule modified_pe_header {strings: $msg = "This program cannot" condition: (not uint16(0) == 0x5A4D) and $msg}'
 	temp_rule_file = tempfile.mktemp()
 	file(temp_rule_file,"wb").write(rule)
 	res = self.yarascan(temp_rule_file)["data"]
 	res2 = self.yarascan(temp_rule_file, is_kernel=True)["data"]
 	os.remove(temp_rule_file)
 	res += res2
-	"""
-	f = file(self.memdump,"rb+")
-	f_data = f.read()
-	for mod in res:
-		to_search = f_data
-		base = 0
-		data = mod["data"]
-		index = to_search.find(data.decode("hex"))
-		while index != -1:
-			print base+index-78
-			f.seek(base+index-78)
-			f.write('\x4d\x5a\x90')
-			#f.seek(base+index-78+0xd0)
-			#f.write('PE')
-			f.seek(0)
-			to_search = to_search[index+1:]
-			base += index+1
-			index = to_search.find(data.decode("hex"))
-	f.close()
-	"""
 	return dict(config={}, 
 		    data=res)
 
@@ -862,9 +828,6 @@ class VolatilityAPI(object):
             	filters = [lambda x : str(x.bType) == "TYPE_WINEVENTHOOK"]
 	    	new = {}
     	    	for handle in shared_info.handles(filters):
-	        	#new["handle"] = handle.phead.h if handle.phead else 0
-			#new["object"] = handle.phead.v()
-			#new["session"] = session.SessionId
 			new["type"] = str(handle.bType)
 			new["flags"] = int(handle.bFlags)
 			new["thread"] = int(handle.Thread.Cid.UniqueThread)
@@ -1498,7 +1461,6 @@ class VolatilityManager(object):
         return VolatilityAPI(self.memfile).imageinfo()["data"][0]["osprofile"] 
 
     def run(self):
-
         # Exit if options were not loaded.
         if not self.voptions:
             return
@@ -1656,9 +1618,9 @@ class Memory(Processing):
 	Returns True if should compare to previous dump and not to clean,
 	Else returns False.
 	"""
-        conf_path = os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf")
+        conf_path = os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf")
 	voptions = Config(conf_path)
-	return voptions.cuckoo.compare_to_previous_dump
+	return voptions.basic.compare_to_previous_dump
 
     def run(self):
         """Run analysis.
