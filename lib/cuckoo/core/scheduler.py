@@ -295,29 +295,7 @@ class AnalysisManager(Thread):
                 log.error(str(e), extra={"task_id": self.task.id})
                 
 	    
-		# Wait for analysis completion.
-	    """
-	    if (self.cfg.cuckoo.memory_dump or self.task.memory) and not self.cfg.cuckoo.triggered_dumps:
-            	try:
-	        	time_to_sleep = int(self.cfg.cuckoo.time_to_sleep_before_dump_in_seconds)
-	        	number_of_dumps = int(self.cfg.cuckoo.max_number_of_dumps)
-                	memory_results_dir = os.path.join(self.storage, "memory")
-                	dumps_dir = os.path.join(memory_results_dir, "dumps")
-	        	os.mkdir(memory_results_dir)
-	        	os.mkdir(dumps_dir)
-			for i in xrange(number_of_dumps):
-		    		log.info("Sleeping %d seconds before taking memory dump %d..." % (time_to_sleep, i+1))
-		    		dump_dir = os.path.join(dumps_dir, str(i+1))
-		    		os.mkdir(dump_dir)
-		    		time.sleep(time_to_sleep)
-		    		machinery.dump_memory(self.machine.label,
-                                          os.path.join(dump_dir,"memory.dmp" ))
-				
-            	except NotImplementedError:
-                	log.error("The memory dump functionality is not available "
-                              "for the current machine manager")
- 	    
-	    """	
+	    # Wait for analysis completion.
             try:
                 guest.wait_for_completion(self.machine, self.storage, machinery)
                 succeeded = True
@@ -326,15 +304,6 @@ class AnalysisManager(Thread):
                 succeeded = False
 
         finally:
-	    # Sleep for 5 secs to let the exe start running on the nachine
-	    #time.sleep(6)
-	    # Take a memory dump of the machine before shutting it off.
-                            #except CuckooMachineError as e:
-                 #   log.error(e)
-		#memory_results_dir = os.path.join(self.storage, "memory")
-                #dumps_dir = os.path.join(memory_results_dir, "dumps")
-		#if os.path.exists(dumps_dir):
-	    
 	    log.info("Taking last dump before terminating...")
 	    mem_dir = os.path.join(self.storage, "memory", "dumps")
             try:
