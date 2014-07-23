@@ -233,26 +233,7 @@ class AnalysisManager(Thread):
                         return False
 
 
-	    # TODO: Check if this file exists in previous reports.
-	    	file_md5 = md5.md5(file(self.task.target,"rb").read()).digest().encode("hex")
-		analysis_dirs =  os.path.join(CUCKOO_ROOT, "storage", "analyses")
-		previous_report_path = None
-		dirs = sorted([i for i in os.listdir(analysis_dirs) if i.isdigit()], key=int)
-		for analysis_dir in dirs:
-			try:
-				analysis_md5 = md5.md5(file(os.path.join(analysis_dirs, analysis_dir, "binary"),"rb").read()).digest().encode("hex")
-				if analysis_md5 == file_md5:
-					report_path = os.path.join(analysis_dirs, analysis_dir, "reports", "report.html")
-					if os.path.exists(report_path):
-						previous_report_path = report_path
-						break
-			except:
-				pass
-		if previous_report_path != None:
-			new_report = os.path.join(analysis_dirs, str(self.task.id), "reports", "report.html")
-			os.mkdir(os.path.dirname(new_report))
-			shutil.copy(previous_report_path, new_report)
-                    # Acquire analysis machine.
+	# Acquire analysis machine.
         try:
             self.acquire_machine()
         except CuckooOperationalError as e:
