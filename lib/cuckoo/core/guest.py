@@ -224,7 +224,7 @@ class GuestManager:
                 raise CuckooGuestError("The analysis hit the critical timeout,"
                                        " terminating")
 	    sec_counter += 1
-	    if (self.cfg.cuckoo.memory_dump) and mem_analysis_conf.basic.time_based and sec_counter % time_to_sleep == 0:
+	    if mem_analysis_conf.basic.time_based and sec_counter % time_to_sleep == 0:
                 dump_dir = os.path.join(dumps_dir, str(i))
                 os.mkdir(dump_dir)
 		log.info("Dumping memory after %d seconds..." % sec_counter)

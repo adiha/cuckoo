@@ -490,7 +490,7 @@ class Scheduler:
 	    	mem_conf_path = os.path.join(CUCKOO_ROOT, "conf", "memory.conf")
 		conf = Config(mem_conf_path)
 		machine.dump_path = ""
-		if (self.cfg.cuckoo.memory_dump or self.task.memory) and conf.memoryanalysis.enabled:
+		if conf.memoryanalysis.enabled:
 			log.info("Starting machine %s" % machine.label)
 			machinery.start(machine.label)
 
