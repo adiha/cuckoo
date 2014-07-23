@@ -308,7 +308,7 @@ class MemoryAnalysis(object):
 				os.remove(r'/tmp/functions')
 			except:
 				pass
-			command = "wine /home/tomer/.wine/drive_c/Program\ Files\ \(x86\)/IDA\ Free/idag_patched.exe -A -S'/home/tomer/cuckoo/IDA/script.idc' '%s' &" % new_exe_full_path
+			command = r'wine "C:\Program Files (x86)\IDA Free\idag_patched.exe" -A -S"%s/IDA/script.idc" "%s" &' % (CUCKOO_ROOT, new_exe_full_path)
             		os.system(command)
             		time.sleep(30)
             		os.system("pkill idag_patched")
