@@ -194,7 +194,6 @@ class MemoryAnalysis(object):
 
 		return new_mals
 
-
 	def get_new_processes(self, old, new, deps):
 		"""
 		Gets new processes between old and new dumps.
@@ -306,14 +305,14 @@ class MemoryAnalysis(object):
 			file_data = file(new_exe_full_path, "rb").read()
 			static["pid"] = mal_exe_proc["process_id"]
 			try:
-				os.remove(r'home/tomer/bla.txt')
+				os.remove(r'/tmp/functions')
 			except:
 				pass
 			command = "wine /home/tomer/.wine/drive_c/Program\ Files\ \(x86\)/IDA\ Free/idag_patched.exe -A -S'/home/tomer/cuckoo/IDA/script.idc' '%s' &" % new_exe_full_path
             		os.system(command)
             		time.sleep(30)
             		os.system("pkill idag_patched")
-            		pefuncs = [a.split("^") for a in file(r'/home/tomer/bla.txt','rb').read().split("--------------\r\n")]
+            		pefuncs = [a.split("^") for a in file(r'/tmp/functions','rb').read().split("--------------\r\n")]
 			funcs = []
 			try:
                 		funcs.remove([""])
@@ -363,81 +362,6 @@ class MemoryAnalysis(object):
 
 		return matched_obs, new_obs, deleted_obs
 
-	def diff_static_analysis(self, old, new, deps, show_new_imports=False):
-		results = {}
-		
-		res = self.static_analyze_new_exe(old, new, deps, True)
-		if len(res) == 0:
-			return results
-		else:
-			static_from_memory, new_exe_data = res
-		static_from_memory = static_from_memory[0]
-		
-		# Calculate for exe
-		if old == []:
-			old = PortableExecutable(self.file_path).run()
-
-		matched_sections, new_sections, deleted_sections = self.get_new_pe_objects("pe_sections", old, new)
-		matched_resources, new_resources, deleted_resources = self.get_new_pe_objects("pe_resources", old, new)
-		
-
-		# Check changed entropy & ssdeep in sections and resources
-		results["sections"] = {}
-		#results["sections"]["num_of_sections"] = (len(static_from_exe["pe_sections"]), \
-		#					     len(static_from_memory["pe_sections"]))		
-		results["sections"]["new_sections"] = new_sections
-		results["sections"]["deleted_sections"] = deleted_sections
-		#results["sections"]["matched_sections"] = matched_sections
-		#results["sections"]["sections"] = []
-		"""
-		for old_section, new_section in matched_sections:
-			sec = {"name" : old_section["name"]}
-			sec["entropy"] = (old_section["entropy"], new_section["entropy"])
-			ssdeep1 = old_section["ssdeep"]
-			ssdeep2 = new_section["ssdeep"]
-			sec["ssdeep"] = {"values" : (ssdeep1, ssdeep2), 
-					 "compare" : pydeep.compare(ssdeep1, ssdeep2)}
-			sec["size"] = (old_section["size_of_data"], new_section["size_of_data"])
-			results["sections"]["sections"].append(sec)
-		"""
-		results["resources"] = {}
-		#results["resources"]["num_of_resources"] = (len(static_from_exe["pe_resources"]), \
-						            #len(static_from_memory["pe_resources"]))
-		results["resources"]["new_resources"] = new_resources
-		results["resources"]["deleted_resources"] = deleted_resources
-		#results["resources"]["matched_resources"] = matched_resources
-		#results["resources"]["resources"] = []
-		"""
-		for old_resource, new_resource in matched_resources:
-			res = {"name" : old_resource["name"]}
-			res["entropy"] = (old_resource["entropy"], new_resource["entropy"])
-			ssdeep1 = old_resource["ssdeep"]
-			ssdeep2 = new_resource["ssdeep"]
-			res["ssdeep"] = {"values" : (ssdeep1, ssdeep2), 
-					 "compare" : pydeep.compare(ssdeep1, ssdeep2)}
-			res["size"] = (old_resource["size"], new_resource["size"])
-			results["resources"]["resources"].append(res)
-		"""
-		#results["entry_point"] = hex(static_from_memory["pe_entry_point"])
-		#results["number_of_exports"] = static_from_memory["pe_exports"]
-		#vol = modules.processing.memory.VolatilityAPI(self.memfile)
-		#imps = vol.impscan(pid=static_from_memory["pid"])["data"]
-		#if show_new_imports:
-		#	results["new_imports"] = imps
-		#results["number_of_imports"] = (len(static_from_exe["pe_imports"]), len(imps))
-		#tempf = tempfile.mktemp()
-		#file(tempf, "wb").write(new_exe_data)
-		#vt1 = vt.run_vt_analysis_on_file(self.file_path)
-		#vt2 = vt.run_vt_analysis_on_file(tempf)
-		#if not vt2.has_key("scans"):
-			#json_res = vt.send_file_for_scan(tempf)
-			#while (True)
-		# TODO: send file for scan in VT
-		#results["vt_ratio"] = (str(vt1["positives"]) +  '/' + str(vt1["total"]),
-				       #"-")
-		#os.remove(tempf)
-
-		return dict(sorted(results.iteritems(), key=lambda key_value: key_value[0]))
 	def parse_trigger_plugins(self, trigger):
 		smart_analysis = False
 		plugins = []
@@ -532,7 +456,7 @@ class MemoryAnalysis(object):
 				if mem_analysis["diffs"].has_key("diff_heap_entropy"):
 					mem_analysis["diffs"]["diff_heap_entropy"]["star"] = "yes"
 		    	    if trigger == "ZwLoadDriver":
-				patcher_res = vol.patcher("/home/tomer/cuckoo/patchpe.xml")
+				patcher_res = vol.patcher(os.path.join(CUCKOO_ROOT, "data", "patchers", "patchpe.xml"))
 				# Dump the new driver
 
 				for p in patcher_res["patches"]:
@@ -603,8 +527,6 @@ class MemoryAnalysis(object):
 
 				shutil.rmtree(dir1)
 				shutil.rmtree(dir2)
-				#if static:
-				#	mem_analysis["triggered"]["static_analysis"] = static
 
 		return mem_analysis, new_results
 

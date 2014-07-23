@@ -1,0 +1,11 @@
+<patchfile>
+	<patchinfo method="pagescan" name="Fix Driver MZ Header">
+		<constraints>
+			<match offset="0x0">000000000300000004000000ffff0000b8</match>
+		</constraints>
+		<patches>
+			<setbytes offset="0x0">4d5a90</setbytes>
+			<setbytes offset="0xd8">5045</setbytes>
+		</patches>
+	</patchinfo>
+</patchfile>

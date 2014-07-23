@@ -233,7 +233,6 @@ class VolatilityAPI(object):
 
 			}
 		results.append(new)
-        #results = command.render_text(file('/dev/nul', 'wb'), command.calculate())
         return dict(config={}, 
 		    data=results)
 
@@ -532,27 +531,6 @@ class VolatilityAPI(object):
 		shutil.rmtree(dump_dir)
 	return dict(config={}, 
 		    data=results)
-
-    def vt_analysis(self):
-        """
-	vt analyze dumped exes
-	"""
-	results = []
-	is_temp_dir = False
-	if not self.results.has_key("procexedump"):
-		dump_dir = tempfile.mkdtemp()
-		res = self.procexedump(dump_dir=dump_dir)
-		is_temp_dir = True
-	else:
-		dump_dir = self.results["procexedump"]["config"]["dump_dir"]
-	for f in os.listdir(dump_dir):
-		full_path = os.path.join(dump_dir, f)
-		results[f] = vt.run_vt_analysis_on_file(full_path)
-	if is_temp_dir:
-		shutil.rmtree(dump_dir)
-	return dict(config={}, 
-		    data=results)
-
 
     # ADI
     def dlldump(self, dump_dir=None, pid=None, base=None, regex=None):
