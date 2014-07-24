@@ -27,6 +27,9 @@ log = logging.getLogger(__name__)
 
 
 def disasm_from_memory(memory_dump_path, pid, base_address, memory_len):
+	"""
+	Returns disassembly of a region from the memory
+	"""
 	data = get_memory_from_proc(memory_dump_path, pid, base_address, memory_len)
 	iterable = distorm3.DecodeGenerator(base_address, data, distorm3.Decode32Bits)
 	ret = ""
@@ -48,6 +51,9 @@ def get_memory_from_proc(memory_dump_path, pid, base_address, memory_len):
 
 
 def add_static_to_malfind(res):
+	"""
+	Adds static information to malfind, if it is a PE
+	"""
 	res2 = []
         for i in res:
         	if i["data"].startswith("MZ".encode("hex")):
@@ -110,6 +116,9 @@ class MemoryAnalysis(object):
 		return list(set(hashable_united_new) - set(hashable_united_old))
 
 	def get_new_dlllist(self, old, new, deps):
+		"""
+		Finds new loaded DLLs according to the owning process and DLL name.
+		"""
 		new_dlls = []
 		for proc in new['dlllist']['data']:
 			pid = proc['process_id']
@@ -133,7 +142,9 @@ class MemoryAnalysis(object):
 		return new_dlls
 	
 	def get_new_by_field(self, old, new, deps, fields):
-
+		"""
+		Gets new objects according to specified fields to compare.
+		"""
 		found_objs = self.get_new_objects(old, new, deps)
 		new_objs = []
 		
@@ -154,14 +165,28 @@ class MemoryAnalysis(object):
 		return new_objs
 
 	def get_new_handles(self, old, new, deps):
+		"""
+		Gets new handles according to the owning process and handle value.
+		"""
 		return self.get_new_by_field(old,new,deps,['process_id', 'handle_value'])
+
 	def get_new_timers(self, old, new, deps):
+		"""
+		Gets new timers according to their offset.
+		"""
 		return self.get_new_by_field(old, new, deps, ['offset'])
 
 	def get_new_mutants(self, old, new, deps):
+		"""
+		Gets new mutants according to the mutant name.
+		"""
 		return self.get_new_by_field(old, new, deps, ['mutant_name'])
 
 	def get_new_connections(self, old, new, deps):
+		"""
+		Gets new connections. 
+		Filters out cuckoo's connections.
+		"""
 		found_connections = self.get_new_objects(old, new, deps)
 		new_connections = []
 		for c in found_connections:
@@ -172,6 +197,9 @@ class MemoryAnalysis(object):
 		return new_connections
 
 	def get_new_malfind(self, old, new, deps, dump_dir=None):
+		"""
+		Gets new malfinds. Filters out malfunds in python processes.
+		"""
 		found_mals = self.get_new_objects(old, new, deps)
 		new_mals = []
 		malfinds_dir = os.path.join(os.path.dirname(self.memfile), "malfinds//")
@@ -201,9 +229,15 @@ class MemoryAnalysis(object):
 		return self.get_new_by_field(old, new, deps, ['process_id'])
 
 	def get_new_services(self, old, new, deps):
+		"""
+		Returns new services. Compares according to the service name.
+		"""
 		return self.get_new_by_field(old, new, deps, ['service_name'])
 
 	def get_new_devices(self, old, new, deps):
+		"""
+		Gets new devices according to the device name and type.
+		"""
 		old_drivers = old[deps[0]]['data']
 		new_drivers = new[deps[0]]['data']
 		found_devs = []
@@ -241,6 +275,9 @@ class MemoryAnalysis(object):
 					break
 		return hidden		
 	def get_new_moddump(self, old, new, deps):
+		"""
+		Dumps new drivers.
+		"""
 		moddir = os.path.join(os.path.dirname(self.memfile), "drivers//")
                 res = self.get_new_objects(old, new, deps)
 
@@ -257,6 +294,9 @@ class MemoryAnalysis(object):
 			pass
 		return res
 	def get_autostart_reg_keys(self, old, new, deps):
+		"""
+		Finds new autostart registry keys in the memory.
+		"""
 		autostart = []
 		for new_handle in new[deps[0]]['data']:
 			is_autostart = False
@@ -277,6 +317,9 @@ class MemoryAnalysis(object):
 		return d
 
 	def get_malware_proc(self, old, new, deps):
+		"""
+		Finds the malware's process in the system (if it is called m.exe).
+		"""
 		processes = new['psxview']['data']
                 mal_exe_proc = None
                 for new_proc in processes:
@@ -286,6 +329,9 @@ class MemoryAnalysis(object):
 		return mal_exe_proc
 
 	def static_analyze_new_exe(self, old, new, deps, return_data=False):
+		"""
+		Static analysis of the new exe.
+		"""
 		mal_exe_proc = self.get_malware_proc(old,new,deps)
 		if mal_exe_proc is None:
 			return []
@@ -330,13 +376,11 @@ class MemoryAnalysis(object):
                                    	     		pass
                         		funcs.append({'name':func[0], 'data':func[1], 'disassembly':buf})
 			static["pe_functions"] = funcs
-			#shutil.rmtree(temp_dir)
 			static["path"] = new_exe_full_path
 			if not return_data:
 				return [static]
 			else:
 				return [static], file_data
-		#shutil.rmtree(temp_dir)
 		return []
 
 
@@ -420,7 +464,6 @@ class MemoryAnalysis(object):
                         	else:
                                 	new_results = self.run_dependencies(new_results, dependencies, **attrs)
 					if mem_analysis_name == "static_analyze_new_exe":
-						#mal_exe_proc = self.get_malware_proc(old,new,deps)
 						mem_analysis[mem_analysis_name] = self.static_analyze_new_exe(self.clean_data, new_results, dependencies, **attrs)
 					elif mem_analysis_name == "diff_heap_entropy":
 						mem_analysis["diffs"]["diff_heap_entropy"] = {"desc" : "Calculates entropy of malware heap process", "new" : [], "deleted" : [], "star": "no"}
@@ -446,7 +489,6 @@ class MemoryAnalysis(object):
 			if smart_analysis:
 			    if memoryanalysisconsts.TRIGGER_PLUGINS.has_key(trigger):
 				for plugin in memoryanalysisconsts.TRIGGER_PLUGINS[trigger]:
-					#self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)
 					if mem_analysis["diffs"].has_key(plugin):
 						mem_analysis["diffs"][plugin]["star"] = "yes"
 
@@ -477,14 +519,10 @@ class MemoryAnalysis(object):
 								mem_analysis["diffs"]["injected_dll"]["new"].append(dlldump["data"][0])	
 								mem_analysis["diffs"]["injected_dll"]["star"] = "yes"
 			    elif trigger == "VirtualProtectEx":
-				#protect = vadinfo.PROTECT_FLAGS.get(int(args["Protection"],16), "")
 				verbal_protect = memoryanalysisconsts.PAGE_PROTECTIONS[int(args["Protection"],16)]
 				protect_vad_val = [key for key,val in vadinfo.PROTECT_FLAGS.iteritems() if val == verbal_protect][0]
         			if "EXECUTE" in verbal_protect:
-					# Fix protection
-					# Run malfind and mark as star
 					mem_analysis["diffs"]["diff_malfind"]["new"].append(vol.malfind(dump_dir=malfinds_dir, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
-					#self.run_memory_plugin(mem_analysis, "new_malfind", self.clean_data, new_results)	
 				else:				
 					mem_analysis["diffs"]["diff_malfind"]["deleted"].append(vol.malfind(dump_dir=None, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
 				mem_analysis["diffs"]["diff_malfind"]["star"] = "yes"
