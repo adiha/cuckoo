@@ -487,9 +487,8 @@ class Scheduler:
                 	try:
 				log.info("Running Volatility for clean dump...")
 				vol = VolatilityManager(machine.dump_path)
-				import json
-				mem_analysis, res, res2 = vol.run()
-				machinery.db.set_machine_clean_volatility_data(machine.name, json.dumps(res))
+				vol.run()
+				machinery.db.set_machine_clean_volatility_data(machine.name, json.dumps(res, sort_keys=False, indent=4))
                 	except Exception:
                     		log.exception("Generic error executing volatility")
         	else:
