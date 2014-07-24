@@ -71,8 +71,8 @@ class MemoryAnalysis(object):
 	"""
 	Class for Memory analysis diff logics.
 	"""
-	def __init__(self, voptions, vol, memfile, file_path, is_clean, clean_data, clean_dump):
-		self.voptions = voptions
+	def __init__(self, vol, memfile, file_path, is_clean, clean_data, clean_dump):
+		self.voptions = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 		self.vol_manager = vol
 		
 		self.results = vol.results
@@ -365,9 +365,8 @@ class MemoryAnalysis(object):
 	def parse_trigger_plugins(self, trigger):
 		smart_analysis = False
 		plugins = []
-		conf = Config(os.path.join(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf")))
-		if hasattr(conf, trigger):
-			trig_opts = getattr(conf, trigger)
+		if hasattr(self.voptions, trigger):
+			trig_opts = getattr(self.voptions, trigger)
 			if trig_opts.run_smart_plugins:
 				smart_analysis = True
 			if trig_opts.run_plugins != "":
@@ -375,8 +374,7 @@ class MemoryAnalysis(object):
 		return smart_analysis, plugins
 
 	def run_memory_plugin(self, mem_analysis, memfunc, clean, new_results, **attrs):
-		conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
-		desc = getattr(conf, memfunc).desc
+		desc = getattr(self.voptions, memfunc).desc
 		deps = memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
 		if memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS.has_key(memfunc):
                 	analysis_func = getattr(self, memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS[memfunc])

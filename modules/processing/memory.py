@@ -134,6 +134,9 @@ class VolatilityAPI(object):
 
     # ADI
     def avstrings(self):
+	"""
+	Finds Anti-Virus strings in the dump.
+	"""
 	if self.results.has_key("strings"):
 		res = self.results["strings"]
 	else:
@@ -153,6 +156,7 @@ class VolatilityAPI(object):
     # ADI
     def patcher(self, xml_path):
         """Volatility patcher plugin.
+	@see volatility/plugins/patcher.py
         """
         log.debug("Executing Volatility patcher plugin on "
                   "{0}".format(self.memdump))
@@ -211,7 +215,7 @@ class VolatilityAPI(object):
     # ADI
     def threads(self, filter=None, pid=None):
         """Volatility threads plugin.
-        @see volatility/plugins/taskmods.py
+        @see volatility/plugins/malware/threads.py
         """
         log.debug("Executing Volatility threads plugin on "
                   "{0}".format(self.memdump))
@@ -238,7 +242,7 @@ class VolatilityAPI(object):
 
     # ADI
     def heapentropy(self, pid=None):
-        """Volatility heapentropy plugin.
+        """Our heapentropy plugin.
         @see volatility/plugins/heap_entropy.py
         """
         log.debug("Executing Volatility heapentropy plugin on "
@@ -419,6 +423,7 @@ class VolatilityAPI(object):
      # ADI
     def yarascan(self, rule_file, is_kernel=True):
         """Volatility yarascan plugin.
+        @see volatility/plugins/malware/malfind.py
         """
         log.debug("Executing Volatility yarascan plugin on "
                   "{0}".format(self.memdump))
@@ -535,6 +540,7 @@ class VolatilityAPI(object):
     # ADI
     def dlldump(self, dump_dir=None, pid=None, base=None, regex=None):
         """Volatility dlldump plugin.
+        @see volatility/plugins/dlldump.py
         """
         log.debug("Executing Volatility dlldump plugin on "
                   "{0}".format(self.memdump))
@@ -584,6 +590,7 @@ class VolatilityAPI(object):
     # ADI    
     def connscan(self):
         """Volatility connscan plugin.
+        @see volatility/plugins/connscan.py
         """
         log.debug("Executing Volatility connscan plugin on "
                   "{0}".format(self.memdump))
@@ -610,6 +617,7 @@ class VolatilityAPI(object):
     # ADI
     def connections(self):
         """Volatility connections plugin.
+        @see volatility/plugins/connections.py
         """
         log.debug("Executing Volatility connections plugin on "
                   "{0}".format(self.memdump))
@@ -636,6 +644,7 @@ class VolatilityAPI(object):
     # ADI
     def sockscan(self):
         """Volatility sockscan plugin.
+        @see volatility/plugins/sockscan.py
         """
         log.debug("Executing Volatility sockscan plugin on "
                   "{0}".format(self.memdump))
@@ -661,6 +670,7 @@ class VolatilityAPI(object):
     # ADI
     def sockets(self):
         """Volatility sockets plugin.
+        @see volatility/plugins/sockets.py
         """
         log.debug("Executing Volatility sockets plugin on "
                   "{0}".format(self.memdump))
@@ -685,6 +695,7 @@ class VolatilityAPI(object):
     # ADI
     def hivelist(self):
         """Volatility hivelist plugin.
+        @see volatility/plugins/regustry/hivelist.py
         """
         log.debug("Executing Volatility hivelist plugin on "
                   "{0}".format(self.memdump))
@@ -784,6 +795,9 @@ class VolatilityAPI(object):
 
     # ADI
     def eventhooks(self):
+	"""Volatility eventhooks plugin.
+        @see volatility/plugins/gui/eventhooks.py
+        """
 	log.debug("Executing Volatility eventhooks plugin on "
                   "{0}".format(self.memdump))
 	results = []
@@ -956,9 +970,10 @@ class VolatilityAPI(object):
         	offset += to_read
     	return data
 
-    # AD
+    # ADI
     def vadwalk(self):
         """Volatility vadwalk plugin.
+        @see volatility/plugins/vadinfo.py
         """
         log.debug("Executing Volatility vadwalk plugin on "
                   "{0}".format(self.memdump))
@@ -1432,88 +1447,18 @@ class VolatilityManager(object):
             return
         self.vol = VolatilityAPI(self.memfile, self.osprofile, self.is_clean)
 
-        # TODO: improve the load of volatility functions.
 	if not self.is_clean:
 		# ADI: We don't want to run if it's running on the clean dump for memory analysis purposes. 
-		if self.voptions.pslist.enabled:
-		    self.vol.results["pslist"] = self.vol.pslist()
-		if self.voptions.psxview.enabled:
-		    self.vol.results["psxview"] = self.vol.psxview()
-		if self.voptions.callbacks.enabled:
-		    self.vol.results["callbacks"] = self.vol.callbacks()
-		if self.voptions.idt.enabled:
-		    self.vol.results["idt"] = self.vol.idt()
-		if self.voptions.timers.enabled:
-		    self.vol.results["timers"] =  self.vol.timers()
-		if self.voptions.messagehooks.enabled:
-		    self.vol.results["messagehooks"] = self.vol.messagehooks()
-		if self.voptions.eventhooks.enabled:
-                    self.vol.results["eventhooks"] = self.vol.eventhooks()
-		if self.voptions.getsids.enabled:
-		    self.vol.results["getsids"] = elf.vol.getsids()
-		if self.voptions.privs.enabled:
-		    self.vol.results["privs"] = self.vol.privs()
-		if self.voptions.malfind.enabled:
-		    self.vol.results["malfind"] = self.vol.malfind(dump_dir=self.output_dir)
-		if self.voptions.apihooks.enabled:
-		    self.vol.results["apihooks"] = self.vol.apihooks()
-		if self.voptions.dlllist.enabled:
-		    self.vol.results["dlllist"] = self.vol.dlllist()
-		if self.voptions.handles.enabled:
-		    self.vol.results["handles"] = self.vol.handles()
-		if self.voptions.ldrmodules.enabled:
-		    self.vol.results["ldrmodules"] = self.vol.ldrmodules()
-		if self.voptions.mutantscan.enabled:
-		    self.vol.results["mutantscan"] = self.vol.mutantscan()
-		if self.voptions.devicetree.enabled:
-		    self.vol.results["devicetree"] = self.vol.devicetree()
-		if self.voptions.svcscan.enabled:
-		    self.vol.results["svcscan"] = self.vol.svcscan()
-		if self.voptions.modscan.enabled:
-		    self.vol.results["modscan"] = self.vol.modscan()
-		if self.voptions.connections.enabled:
-		    self.vol.results["connections"] = self.vol.connections()
-		if self.voptions.connscan.enabled:
-		    self.vol.results["connscan"] = self.vol.connscan()
-		if self.voptions.sockscan.enabled:
-		    self.vol.results["sockscan"] = self.vol.sockscan()
-		if self.voptions.sockets.enabled:
-		    self.vol.results["sockets"] = self.vol.sockets()
-		if self.voptions.yarascan.enabled:
-		    rule = self.voptions.yarascan.rule_file
-		    self.vol.results["yarascan"] = self.vol.yarascan(rule)
-		if self.voptions.strings.enabled:
-		    self.vol.results["strings"] = self.vol.strings()
-		if self.voptions.modified_pe_header.enabled:
-		    self.vol.results["modified_pe_header"] = self.vol.modified_pe_header()
-		if self.voptions.avstrings.enabled:
-		    self.vol.results["avstrings"] = self.vol.avstrings()
-		if self.voptions.malsysproc.enabled:
-		    self.vol.results["malsysproc"] = self.vol.malsysproc()
-		if self.voptions.find_suspicious_windows_processes.enabled:
-		    self.vol.results["find_suspicious_windows_processes"] = self.vol.find_suspicious_windows_processes()
-		
-		if self.voptions.find_strings_from_list.enabled:
-		    lst = eval(self.voptions.find_strings_from_list.lst)
-		    self.vol.results["find_strings_from_list"] = self.vol.find_strings_from_list(lst)
-        	if self.voptions.procexedump.enabled:
-			dump_dir = self.voptions.procexedump.dump_dir
-			self.vol.results["procexedump"] = self.vol.procexedump(dump_dir)
-		if self.voptions.dlldump.enabled:
-			dump_dir = self.voptions.dlldump.dump_dir
-			self.vol.results["dlldump"] = self.vol.dlldump(dump_dir)
-		if self.voptions.static_analysis.enabled:
-			self.vol.results["static_analysis"] = self.vol.static_analysis()
-		if self.voptions.vt_analysis.enabled:
-			self.vol.results["vt_analysis"] = self.vol.vt_analysis()
-		if self.voptions.moddump.enabled:
-			dump_dir = self.voptions.moddump.dump_dir
-			self.vol.results["moddump"] = self.vol.moddump()
-		if self.voptions.hivelist.enabled:
-			self.vol.results["hivelist"] = self.vol.hivelist()
-		if self.voptions.impscan_all_processes.enabled:
-			self.vol.results["impscan_all_processes"] = self.vol.impscan_all_processes()
-
+		sections = [s for s in dir(self.voptions) if s != "get" and not s.startswith("_")]
+		for opt in sections:
+			opts = getattr(self.voptions, opt)
+			if opts.enabled:
+				opts.pop("enabled")
+				if opts.has_key("filter"):
+					opts.pop("filter")
+				if opts.has_key("desc"):
+					opts.pop("desc")
+				self.vol.results[opt] = getattr(self.vol, opt)(opts)
 	self.find_taint(self.vol.results)
         self.cleanup()
         self.vol.results = self.mask_filter(self.vol.results)
@@ -1525,7 +1470,7 @@ class VolatilityManager(object):
 	conf_path = os.path.join(CUCKOO_ROOT, "conf", "processing.conf")
         conf = Config(conf_path)	
 	if conf.memoryanalysis.enabled:
-		mem_analysis, new_results = memoryanalysis.MemoryAnalysis(self.voptions, self.vol, self.memfile, self.file_path, self.is_clean, self.clean_data, self.clean_dump).run_memory_analysis()
+		mem_analysis, new_results = memoryanalysis.MemoryAnalysis(self.vol, self.memfile, self.file_path, self.is_clean, self.clean_data, self.clean_dump).run_memory_analysis()
 		
 
 	return mem_analysis, self.vol.results, new_results
@@ -1602,12 +1547,9 @@ class Memory(Processing):
 		mem = os.path.join(self.memory_dumps_dir_path, mem_dir, "memory.dmp")
 		if mem and os.path.exists(mem):
                 	try:
-		    	#output_dir = os.path.join(CUCKOO_ROOT, "storage", "analyses", str(self.task["id"]), "memory")
                     		output_dir = os.path.dirname(mem)
-		    		#vol = VolatilityManager(mem, clean_data=vol_data, output_dir=output_dir)
 				vol = VolatilityManager(mem, file_path=self.file_path, clean_data=vol_data, clean_dump=vol_dump, output_dir=output_dir, machine=self.task['machine'])
 			
-                    		#results['Dump_%s' % mem_dir] = vol.run()
                     		mem_analysis, memo, new_results = vol.run()
 				results["Dump_%s" % mem_dir] = {}
 				info_json_file = os.path.join(output_dir, "info.json")
@@ -1618,7 +1560,6 @@ class Memory(Processing):
 				results["Dump_%s" % mem_dir]["memory"] = dict(mem_analysis.items() + memo.items())
 				results["Dump_%s" % mem_dir]["path"] = mem
 				if self.should_compare_to_previous():
-					#vol_data = results['Dump_%s' % mem_dir][0]
 					vol_data = new_results
 					vol_dump = mem
                 	except Exception:
@@ -1627,6 +1568,4 @@ class Memory(Processing):
                 	log.error("Memory dump not found: to run volatility you have to enable memory_dump")
         else:
             log.error("Cannot run volatility module: volatility library not available")
-	
-
 	return results
