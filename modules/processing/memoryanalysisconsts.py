@@ -1,197 +1,101 @@
+# Anti-Virus names strings
 AV_NAMES = [
-
-#"Firewall",
-
-"AntiVirus",
-
-"McAfee",
-
-"Symantec",
-
-"Kaspersky",
-
-"ZoneLabs",
-
-"Panda",
-
-"Sophos",
-
-"Ahnlab",
-
-"BitDefender",
-
-"Norton",
-
-"NetLimiter",
-
-"Avira",
-
-"Avast",
-
-"Agnitum",
-
-"antivir",
-
-"baidu",
-
-"virobot",
-
-"totaldefense",
-
-"thehacker"
-
-  ]
+	"AntiVirus",
+	"McAfee",
+	"Symantec",
+	"Kaspersky",
+	"ZoneLabs",
+	"Panda",
+	"Sophos",
+	"Ahnlab",
+	"BitDefender",
+	"Norton",
+	"NetLimiter",
+	"Avira",
+	"Avast",
+	"Agnitum",
+	"antivir",
+	"baidu",
+	"virobot",
+	"totaldefense",
+	"thehacker"
+]
 
 # AntiVirus process names list.
-
 # Short names include ".exe" to avoid false positives.
-
 AV_PROCESS_NAMES = [
-
-"avciman", 
-
-"avengine", 
-
-"avp.exe",
-
-"ca.exe", 
-
-"caissdt", 
-
-"cavrid", 
-
-"cavtray", 
-
-"ccapp.exe", 
-
-"ccetvmgr", 
-
-"ccproxy", 
-
-"ccsetmgr",
-
-"dpasnt",
-
-"firewallntservice", 
-
-"fsaw.exe", 
-
-"fsguidll", 
-
-"fsm32.exe", 
-
-"fspex.exe",
-
-"hsockpe",
-
-"isafe",
-
-"kav.exe", 
-
-"kavpf.exe",
-
-"mcagent", 
-
-"mcdetect", 
-
-"mcshield", 
-
-"mctskshd", 
-
-"mcupdate", 
-
-"mcupdmgr", 
-
-"mcvsescn", 
-
-"mcvsshld", 
-
-"mpeng", 
-
-"mpfagent", 
-
-"mpfservice", 
-
-"mpftray", 
-
-"msascui", 
-
-"mscifapp", 
-
-"mscorsvw", 
-
-"msfwsvc", 
-
-"mskagent", 
-
-"msksrvr", 
-
-"msmpsvc", 
-
-"mxtask",
-
-"navapsvc", 
-
-"nscsrvce",
-
-"oasclnt",
-
-"pavfnsvr", 
-
-"pavprsrv", 
-
-"pavsrv51", 
-
-"pnmsrv", 
-
-"psimsvc", 
-
-"pskmssvc",
-
-"sdhelp", 
-
-"sndsrvc", 
-
-"spbbcsvc", 
-
-"spysweeper", 
-
-"spysweeperui", 
-
-"srvload", 
-
-"ssu.exe", 
-
-"swdoctor", 
-
-"symlcsvc",
-
-"tpsrv", 
-
-"tsantispy",
-
-"vir.exe", 
-
-"vrfwsvc", 
-
-"vrmonnt", 
-
-"vrmonsvc", 
-
-"vsmon",
-
-"wad-watch", 
-
-"wdfdataservice", 
-
-"webproxy", 
-
-"webrootdesktopfirewall", 
-
-"winssnotify", 
-
-"zlclient",
-
+	"avciman", 
+	"avengine", 
+	"avp.exe",
+	"ca.exe", 
+	"caissdt", 
+	"cavrid", 
+	"cavtray", 
+	"ccapp.exe", 
+	"ccetvmgr", 
+	"ccproxy", 
+	"ccsetmgr",
+	"dpasnt",
+	"firewallntservice", 
+	"fsaw.exe", 
+	"fsguidll", 
+	"fsm32.exe", 
+	"fspex.exe",
+	"hsockpe",
+	"isafe",
+	"kav.exe", 
+	"kavpf.exe",
+	"mcagent", 
+	"mcdetect", 
+	"mcshield", 
+	"mctskshd", 
+	"mcupdate", 
+	"mcupdmgr", 
+	"mcvsescn", 
+	"mcvsshld", 
+	"mpeng", 
+	"mpfagent", 
+	"mpfservice", 
+	"mpftray", 
+	"msascui", 
+	"mscifapp", 
+	"mscorsvw", 
+	"msfwsvc", 
+	"mskagent", 
+	"msksrvr", 
+	"msmpsvc", 
+	"mxtask",
+	"navapsvc", 
+	"nscsrvce",
+	"oasclnt",
+	"pavfnsvr", 
+	"pavprsrv", 
+	"pavsrv51", 
+	"pnmsrv", 
+	"psimsvc", 
+	"pskmssvc",
+	"sdhelp", 
+	"sndsrvc", 
+	"spbbcsvc", 
+	"spysweeper", 
+	"spysweeperui", 
+	"srvload", 
+	"ssu.exe", 
+	"swdoctor", 
+	"symlcsvc",
+	"tpsrv", 
+	"tsantispy",
+	"vir.exe", 
+	"vrfwsvc", 
+	"vrmonnt", 
+	"vrmonsvc", 
+	"vsmon",
+	"wad-watch", 
+	"wdfdataservice", 
+	"webproxy", 
+	"webrootdesktopfirewall", 
+	"winssnotify", 
+	"zlclient",
 ]
 
 
@@ -207,114 +111,71 @@ PSXSCAN_RULES = [
 
 		]
 
-IDT_RULES = [
-	        {'section' : '.rsrc',
-	        }
-	    ]
-
 AUTOSTART_REG_KEYS = [
-
 r"software\microsoft\windows\currentversion\run",
-
 r"software\microsoft\windows\currentversion\runonce",
-
 r"software\microsoft\windows\currentversion\runservices",
-
 r"software\microsoft\windows\currentversion\runservicesonce",
-
 r"software\microsoft\windows\currentversion\run",
-
 r"software\microsoft\windows\currentversion\runonce",
-
 r"software\microsoft\windows\currentversion\runonce\setup",
-
 r".default\software\microsoft\windows\currentversion\run",
-
 r".default\software\microsoft\windows\currentversion\runonce",
-
 r"software\microsoft\windows NT\currentversion\Winlogon ",
-
 r"software\microsoft\Active setup\Installed Components",
-
 r"system\currentcontrolset\services\vxd",
-
 r"control panel\desktop control panel\desktop",
-
 r"system\currentcontrolset\control\session manager",
-
 r"vbsfile\shell\open\command",
-
 r"vbefile\shell\open\command",
-
 r"jsfile\shell\open\command",
-
 r"jsefile\shell\open\command",
-
 r"wshfile\shell\open\command",
-
 r"wsffile\shell\open\command",
-
 r"exefile\shell\open\command",
-
 r"comfile\shell\open\command",
-
 r"batfile\shell\open\command",
-
 r"scrfile\shell\open\command",
-
 r"piffile\shell\open\command",
-
 r"system\currentcontrolset\services",
-
 r"system\control\wow\cmdline",
-
 r"system\control\wow\wowcmdline",
-
 r"software\microsoft\windows NT\currentversion\winlogon\userinit",
-
 r"software\microsoft\windows\currentversion\shellserviceobjectdelayload",
-
 r"software\microsoft\windows NT\currentversion\windows\run",
-
 r"software\microsoft\windows NT\currentversion\windows\load",
-
 r"software\microsoft\windows\currentversion\policies\explorer\run",
-
 r"software\microsoft\windows\currentversion\policies\explorer\run",
-
 r"services\winsock2\parameters",
-
 ]
 
 VIRTUAL_BOX_DEVICES = [
-{"device_type": "FILE_DEVICE_UNKNOWN",
- "device_name": "_HID00000000"
-},
-{"device_type": "FILE_DEVICE_MOUSE",
-"device_name": "PointerClass2"
-},
-{"device_type": "FILE_DEVICE_MOUSE",
-"device_name": ""
-},
-
-{
- "device_type": "FILE_DEVICE_UNKNOWN",
- "device_name": "00000046"
-},
+	{"device_type": "FILE_DEVICE_UNKNOWN",
+	 "device_name": "_HID00000000"
+	},
+	{"device_type": "FILE_DEVICE_MOUSE",
+	"device_name": "PointerClass2"
+	},
+	{"device_type": "FILE_DEVICE_MOUSE",
+	"device_name": ""
+	},
+	{
+ 	"device_type": "FILE_DEVICE_UNKNOWN",
+ 	"device_name": "00000046"
+	},
 ]
 
 WIN_KERNEL_MODULES = [
-"mouhid.sys",
-"hidusb.sys",
-"hidclass.sys",
+	"mouhid.sys",
+	"hidusb.sys",
+	"hidclass.sys",
 ]
 
 WIN_SERVICES = [
-"kmixer",
-"rsdl2tp",
-"ndiswan",
-"ndistapi",
-
+	"kmixer",
+	"rsdl2tp",
+	"ndiswan",
+	"ndistapi",
 ]
 
 PAGE_PROTECTIONS = {
