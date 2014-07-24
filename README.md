@@ -12,4 +12,6 @@ Usage:
 	1. Download zip
 	2. Config Cuckoo
 	3. Run cuckoo.py
-	
+
+Analysis Machine:
+	1. Run CPU.exe on your analysis machine.	
