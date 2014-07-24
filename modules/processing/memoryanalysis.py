@@ -213,15 +213,9 @@ class MemoryAnalysis(object):
 		if dump_dir is not None:
                 	for new_mal in new_mals:
 				name = "process.{0:#x}.{1:#x}.dmp".format(new_mal["offset"], int(new_mal["vad_start"],16))
-                        	try:
-					shutil.copy(dump_dir + '//' + name, malfinds_dir + name)
-				except:
-					pass
-                	try:
-                        	shutil.rmtree(old["malfind"]["config"]["dump_dir"])
-                        	shutil.rmtree(new["malfind"]["config"]["dump_dir"])
-                	except:
-                        	pass
+				utils.copy_safe(dump_dir + '//' + name, malfinds_dir + name)
+                        	utils.remove_dir_safe(old["malfind"]["config"]["dump_dir"])
+                        	utils.remove_dir_safe(new["malfind"]["config"]["dump_dir"])
 
 		return new_mals
 
@@ -286,15 +280,9 @@ class MemoryAnalysis(object):
 
                 # Copy new drivers to dir
                 for new_driver in res:
-			try:
-				shutil.copy(new["moddump"]["config"]["dump_dir"] + "/driver.{0:x}.sys".format(new_driver["module_base"]), moddir + new_driver["module_name"])
-			except:
-				pass
-		try:
-			shutil.rmtree(old["moddump"]["config"]["dump_dir"])
-			shutil.rmtree(new["moddump"]["config"]["dump_dir"])
-		except:
-			pass
+			utils.copy_safe(new["moddump"]["config"]["dump_dir"] + "/driver.{0:x}.sys".format(new_driver["module_base"]), moddir + new_driver["module_name"])
+		utils.remove_dir_safe(old["moddump"]["config"]["dump_dir"])
+		utils.remove_dir_safe(new["moddump"]["config"]["dump_dir"])
 		return res
 	def get_autostart_reg_keys(self, old, new, deps):
 		"""
@@ -564,8 +552,8 @@ class MemoryAnalysis(object):
                                         if t["TID"] == tid:
                                                 mem_analysis["diffs"]["injected_thread"]["new"].append(t)
 
-				shutil.rmtree(dir1)
-				shutil.rmtree(dir2)
+				utils.remove_dir_safe(dir1)
+				utils.remove_dir_safe(dir2)
 
 		return mem_analysis, new_results
 

@@ -8,12 +8,12 @@ import copy
 import re
 import tempfile
 import itertools
-import shutil
 import json
 
 from lib.cuckoo.common.abstracts import Processing
 from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.core import scheduler
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
 import lib.cuckoo.common.utils as cuckoo_utils
@@ -533,7 +533,7 @@ class VolatilityAPI(object):
 		pe["executable"] = f
 		results.append(pe)
 	if is_temp_dir:
-		shutil.rmtree(dump_dir)
+		cuckoo_utils.remove_dir_safe(dump_dir)
 	return dict(config={}, 
 		    data=results)
 
@@ -1516,8 +1516,6 @@ class Memory(Processing):
 	Gets the clean data for the given machine
 	"""
 	# ADI
-	from lib.cuckoo.core import scheduler
-	import json
 	for machine in scheduler.machinery.machines():
 		if machine.name == machine_name:
 			return json.loads(machine.clean_volatility)

@@ -61,12 +61,31 @@ def delete_folder(folder):
 
 def create_dir_safe(folder):
 	"""Creates a directory. 
-	Won't cause an exception if directory aleready exists.
+	Won't cause an exception if directory already exists.
 	"""
 	try:
 		os.mkdir(folder)
 	except OSError as e:
 		if e.errno != errno.EEXIST:
+			raise
+def remove_dir_safe(folder):
+	"""Removes a directory. 
+	Won't cause an exception if directory does not exist.
+	"""
+	try:
+		shutil.rmtree(folder)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
+			raise
+
+def copy_safe(src, dst):
+	"""Copies a file. 
+	Won't cause an exception if file does not exist.
+	"""
+	try:
+		shutil.copy(src, dst)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
 			raise
 
 # don't allow all characters in "string.printable", as newlines, carriage
