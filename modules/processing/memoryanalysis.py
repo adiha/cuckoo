@@ -11,7 +11,7 @@ import logging
 
 from lib.cuckoo.common.config import Config
 import lib.cuckoo.common.utils as utils
-from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.common.constants import CUCKOO_ROOT, CUCKOO_GUEST_PORT
 from modules.processing.static import PortableExecutable
 
 import modules.processing.memory
@@ -189,10 +189,13 @@ class MemoryAnalysis(object):
 		"""
 		found_connections = self.get_new_objects(old, new, deps)
 		new_connections = []
+		cuckoo_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "cuckoo.conf"))
+		remote_port = cuckoo_conf.resultserver.port
+		remote_address = cuckoo_conf.resultserver.ip
 		for c in found_connections:
-			if not (c["local_port"] == 8000 or \
-			   c['remote_port'] == 2042 or \
-			   c["remote_address"]	== "293.268.122.1"):
+			if not (c["local_port"] == CUCKOO_GUEST_PORT or \
+			   c['remote_port'] == remote_port or \
+			   c["remote_address"]	== remort_address):
 				new_connections.append(c)
 		return new_connections
 
