@@ -19,25 +19,29 @@ Cuckoo Sanbox fork for Memory Analysis.
 <a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuring Cuckoo to run memory analysis</h3>
 <ul class="task-list">
 <li>In processing.conf, change the file to the following:
-[memoryanalysis]
+<pre><code>[memoryanalysis]
 enabled = yes
+</code></pre>
 </li>
 <li>Configure your memory analysis. You can find a new file, memoryanalysis.conf, in which you can set all the parameters for your analysis.</li>
-<li>If you want to use the regular Volatility plugins without doing any diff logic, just configure it in memory.conf, and the results will appear under every dump (the new report format is described in the following section).</li>
+<li>If you want to use the regular Volatility plugins without doing any diff logic, just configure it in memory.conf, and the results will appear under every dump (the new report format is described in the following section).
+Note: We also wrapped Existing Volatility plugins which were not wrapped by Cuckoo, they can also be used.</li>
 </ul>
 <h3>
 <a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Changes in the report</h3>
 Cuckoo generates a JSON report (the data in it is used to generate the HTML report that can be viewed with the Cuckoo web server).
 We made a few changes in this JSON report to include the memory analysis results, too.
 Before adding our code, the report.json format was:
+<pre><code>
 {
 	'memory' : {
 			'malfind' : {} ...
 		   }
 }
+</code></pre>
 Now, we created a key in the result dictionary for each dump. The value of the key is the result dictionary for this dump.
 The heirarchy looks like that:
-
+<pre><code>
 {
 	'dumps' : {
 		'Dump_1' : {
@@ -47,8 +51,17 @@ The heirarchy looks like that:
 						'time' : "..."
 					 }
 		
-			   },
+			   } ,
 		'Dump_2' : {...}
 	}
 }
+</code></pre>
 
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Added Plugins</h3>
+We added plugins which did not exist in Volatility.
+<ul class="task-list">
+<li>Heap entropy: Calculates the current heap entropy of a process.</li>
+<li>AVStrings: Finds Anti-Virus strings in the dump.</li>
+<li>Modified PE Header: Finds incomplete PE headers.</li>
+</ul>
