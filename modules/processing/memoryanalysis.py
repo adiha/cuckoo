@@ -15,13 +15,11 @@ from lib.cuckoo.common.constants import CUCKOO_ROOT, CUCKOO_GUEST_PORT
 from modules.processing.static import PortableExecutable
 
 import modules.processing.memory
-import modules.processing.virustotal as vt
 
 from volatility.plugins import volshell
 import volatility.plugins.vadinfo as vadinfo
 
 import distorm3
-import win32con
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +93,12 @@ class MemoryAnalysis(object):
 		info_json_file = os.path.join(dump_dir, "info.json")
 		if os.path.exists(info_json_file):
 			self.info = json.load(file(info_json_file, "rb"))
+		self.vol = modules.processing.memory.VolatilityAPI(self.memfile)
+		self.clean_vol = None
+		if os.path.exists(self.clean_dump):
+			self.clean_vol = modules.processing.memory.VolatilityAPI(self.clean_dump)
+
+
 	def run_dependencies(self, results, dependencies, **attrs):
 		"""
 		Runs each dependency if its result does not already exist  
@@ -221,7 +225,7 @@ class MemoryAnalysis(object):
 
 	def get_new_processes(self, old, new, deps):
 		"""
-		Gets new processes between old and new dumps.
+		Gets new processes between old and new dumps accroding to PID.
 		"""
 		return self.get_new_by_field(old, new, deps, ['process_id'])
 
@@ -253,9 +257,11 @@ class MemoryAnalysis(object):
 				if is_new:
 					found_devs.append(new_device)
 		return found_devs
+
 	def get_new_hidden_processes(self, old, new, deps):
 		"""
-		Finds hidden processes
+		Finds hidden processes.
+		Uses psxview plugin of Volatility to compare between a few techniques to find processes.
 		"""
 		proclist = self.get_new_processes(old, new, deps)
 		hidden = []
@@ -271,6 +277,7 @@ class MemoryAnalysis(object):
 					hidden.append(proc)
 					break
 		return hidden		
+
 	def get_new_moddump(self, old, new, deps):
 		"""
 		Dumps new drivers.
@@ -284,6 +291,7 @@ class MemoryAnalysis(object):
 		utils.remove_dir_safe(old["moddump"]["config"]["dump_dir"])
 		utils.remove_dir_safe(new["moddump"]["config"]["dump_dir"])
 		return res
+
 	def get_autostart_reg_keys(self, old, new, deps):
 		"""
 		Finds new autostart registry keys in the memory.
@@ -300,13 +308,6 @@ class MemoryAnalysis(object):
 					autostart.append(new_handle)
 		return autostart
 
-	def get_functions_as(self, p):
-		d = {}
-		for func_offset in p.names.keys():
-			if p.names[func_offset].startswith('sub'):
-				d[p.names[func_offset]] = p.getBytes(func_offset, p.getFunctionEnd(func_offset) - func_offset)
-		return d
-
 	def get_malware_proc(self, old, new, deps):
 		"""
 		Finds the malware's process in the system (if it is called m.exe).
@@ -318,6 +319,21 @@ class MemoryAnalysis(object):
                                 mal_exe_proc = new_proc
                                 break
 		return mal_exe_proc
+
+	def get_injected_thread(self, pid, tid, mem_analysis, dis=None):
+		"""
+		Adds information about the injected thread.
+		"""
+		mem_analysis["diffs"]["injected_thread"] = {
+			"new" 		: [],
+			"deleted"	: [],
+			"star"		: "yes", 
+			"desc"		: "Shows the injected thread", 
+			"disassembly" 	: dis}
+                threads = self.vol.threads(pid=pid)["data"]
+                for t in threads:
+                	if t["TID"] == tid:
+                        	mem_analysis["diffs"]["injected_thread"]["new"].append(t)
 
 	def static_analyze_new_exe(self, old, new, deps, return_data=False):
 		"""
@@ -374,34 +390,16 @@ class MemoryAnalysis(object):
 				return [static], file_data
 		return []
 
-
-	def get_new_pe_objects(self, object_type, static_from_exe, static_from_memory):
-		matched_obs = []
-		new_obs = []
-		deleted_obs = []
-
-		for old_ob in static_from_exe[object_type]:
-			ob_name = old_ob["name"]
-			is_matched = False
-			for new_ob in static_from_memory[object_type]:
-				if new_ob["name"] == ob_name:
-					matched_obs.append([old_ob, new_ob])
-					is_matched = True
-					break
-			if not is_matched:
-				deleted_obs.append(old_ob)
-		new_matched_obs = [ob[1] for ob in matched_obs]
-		for new_ob in static_from_memory[object_type]:
-			if not new_ob in new_matched_obs:
-				new_obs.append(new_ob)
-
-		return matched_obs, new_obs, deleted_obs
-
 	def parse_trigger_plugins(self, trigger):
+		"""
+		Parses trigger entry in the memory analysis configuration.
+		Returns whether to run smart analysis,
+		and plugins to run for this trigger.
+		"""
 		smart_analysis = False
 		plugins = []
-		if hasattr(self.voptions, trigger):
-			trig_opts = getattr(self.voptions, trigger)
+		if hasattr(self.voptions, "Trigger_" + trigger):
+			trig_opts = getattr(self.voptions, "Trigger_" + trigger)
 			if trig_opts.run_smart_plugins:
 				smart_analysis = True
 			if trig_opts.run_plugins != "":
@@ -409,8 +407,20 @@ class MemoryAnalysis(object):
 		return smart_analysis, plugins
 
 	def run_memory_plugin(self, mem_analysis, memfunc, clean, new_results, **attrs):
+		"""
+		Checks that dependencies exist and then run the memory plugin.
+		Finds new and deleted artifacts.
+		New objects are found by detecting artifacts that exist in the new dump, but not in the old one.
+		Old objects are found by detecting artifacts that exist in the old dump, but not in the new one.
+		"""
 		desc = getattr(self.voptions, memfunc).desc
 		deps = memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
+		for dep in deps:
+			if not clean.has_key(dep):
+				clean[dep] = getattr(self.clean_vol, dep)()
+			if not new_results.has_key(dep):
+				new_results[dep] = getattr(self.vol, dep)()
+
 		if memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS.has_key(memfunc):
                 	analysis_func = getattr(self, memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS[memfunc])
                 else:
@@ -432,7 +442,6 @@ class MemoryAnalysis(object):
 		new_results = copy.deepcopy(self.results)
 		mem_analysis = {}
 		mem_analysis["diffs"] = {}
-                vol = modules.processing.memory.VolatilityAPI(self.memfile)
 		dlls_dir = os.path.join(os.path.dirname(self.memfile), "dlls")
                 drivers_dir = os.path.join(os.path.dirname(self.memfile), "drivers")
                 malfinds_dir = os.path.join(os.path.dirname(self.memfile), "malfinds")
@@ -441,8 +450,7 @@ class MemoryAnalysis(object):
                         utils.create_dir_safe(dlls_dir)
 			utils.create_dir_safe(drivers_dir)
 			utils.create_dir_safe(malfinds_dir)
-
-        	for mem_analysis_name, dependencies in memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
+		for mem_analysis_name, dependencies in memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
 			attrs = getattr(self.voptions, mem_analysis_name)
 			if attrs.enabled:
 				log.info("Running plugin: %s" % mem_analysis_name)
@@ -462,7 +470,7 @@ class MemoryAnalysis(object):
                 				if proc is not None:
                         				pid = proc["process_id"]
 							try:
-                        					mem_analysis["diffs"]["diff_heap_entropy"]["value"] = vol.heapentropy(pid=str(pid))["data"][0]["entropy"]
+                        					mem_analysis["diffs"]["diff_heap_entropy"]["value"] = self.vol.heapentropy(pid=str(pid))["data"][0]["entropy"]
 							except:
 								pass
 					else:
@@ -471,73 +479,73 @@ class MemoryAnalysis(object):
 			trigger = self.info["trigger"]["name"]
 			args = self.info["trigger"]["args"]
 			smart_analysis, plugins_to_run = self.parse_trigger_plugins(trigger)
-			mem_analysis["diffs"]["injected_thread"] = {"new":[],"deleted":[],"star":"no", "desc":"Shows the injected thread"}
-			mem_analysis["diffs"]["injected_dll"] = {"star" : "no", "new": [], "deleted": [], "desc" : "Finds the injected dll and dumps it"}
-			vol = modules.processing.memory.VolatilityAPI(self.memfile)
-			clean_vol = modules.processing.memory.VolatilityAPI(self.clean_dump)
-
-
+			for plugin in plugins_to_run:
+				if not mem_analysis["diffs"].has_key(plugin):
+                                	self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)
 			if smart_analysis:
 			    if memoryanalysisconsts.TRIGGER_PLUGINS.has_key(trigger):
 				for plugin in memoryanalysisconsts.TRIGGER_PLUGINS[trigger]:
-					if mem_analysis["diffs"].has_key(plugin):
-						mem_analysis["diffs"][plugin]["star"] = "yes"
+					if not mem_analysis["diffs"].has_key(plugin):
+						self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)			
+					mem_analysis["diffs"][plugin]["star"] = "yes"
 
 			    if trigger == "monitorCPU":
 				if mem_analysis["diffs"].has_key("diff_heap_entropy"):
 					mem_analysis["diffs"]["diff_heap_entropy"]["star"] = "yes"
 		    	    if trigger == "ZwLoadDriver":
-				patcher_res = vol.patcher(os.path.join(CUCKOO_ROOT, "data", "patchers", "patchpe.xml"))
+				patcher_res = self.vol.patcher(os.path.join(CUCKOO_ROOT, "data", "patchers", "patchpe.xml"))
 				# Dump the new driver
 
 				for p in patcher_res["patches"]:
 					log.info("Dumping drive in offset: %d" % p)
 					base = int(p) + 0x7fe00000
-					res = vol.moddump(dump_dir=drivers_dir, base=base)
+					res = self.vol.moddump(dump_dir=drivers_dir, base=base)
 					name = res["data"][0]["module_name"]
 					mem_analysis["diffs"]["diff_moddump"]["new"].append({"module_name" : name,"module_base" : base})
 			    elif trigger == "SetWindowsHookExA" or trigger == "SetWindowsHookExW":
-				if mem_analysis["diffs"].has_key("diff_messagehooks"):
-					for mh in mem_analysis["diffs"]["diff_messagehooks"]["new"]:
+			    	for mh in mem_analysis["diffs"]["diff_messagehooks"]["new"]:
 						pid_pat = "\(.*?(\d+)\)"
 						
 						pids = re.findall(pid_pat, mh["thread"])
 						if len(pids) > 0:
 							pid = pids[0]
 							mod_name = mh["module"].split("\\")[-1]
-							dlldump = vol.dlldump(dump_dir=dlls_dir, pid=pid, regex=mod_name)
+							dlldump = self.vol.dlldump(dump_dir=dlls_dir, pid=pid, regex=mod_name)
+							mem_analysis["diffs"]["injected_dll"] = {
+                        "new"           : [],
+                        "deleted"       : [],
+                        "star"          : "yes",
+                        "desc"          : "Shows the injected DLL",
+                        }
 							if dlldump["data"] != []:
 								mem_analysis["diffs"]["injected_dll"]["new"].append(dlldump["data"][0])	
-								mem_analysis["diffs"]["injected_dll"]["star"] = "yes"
 			    elif trigger == "VirtualProtectEx":
 				verbal_protect = memoryanalysisconsts.PAGE_PROTECTIONS[int(args["Protection"],16)]
 				protect_vad_val = [key for key,val in vadinfo.PROTECT_FLAGS.iteritems() if val == verbal_protect][0]
         			if "EXECUTE" in verbal_protect:
-					mem_analysis["diffs"]["diff_malfind"]["new"].append(vol.malfind(dump_dir=malfinds_dir, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
+					mem_analysis["diffs"]["diff_malfind"]["new"].append(self.vol.malfind(dump_dir=malfinds_dir, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
 				else:				
-					mem_analysis["diffs"]["diff_malfind"]["deleted"].append(vol.malfind(dump_dir=None, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
+					mem_analysis["diffs"]["diff_malfind"]["deleted"].append(self.vol.malfind(dump_dir=None, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
 				mem_analysis["diffs"]["diff_malfind"]["star"] = "yes"
 		    	    elif trigger == "WriteProcessMemory -> CreateRemoteThread -> LoadLibrary":
 			 	resdir = os.path.join(os.path.dirname(self.memfile), "dlls")
-                                create_dir_safe(resdir)
+                                utils.create_dir_safe(resdir)
 				pid = str(args["ProcessId"])
 				base = int(args["BaseAddress"], 16)
 				
-				new_dlldump = vol.dlldump(dump_dir=resdir, pid=pid, base=base)
-				mem_analysis["diffs"]["injected_dll"] = {"star" : "yes", "new": new_dlldump["data"], "deleted": [], "desc" : "Finds the injected dll and dumps it"}
+				new_dlldump = self.vol.dlldump(dump_dir=resdir, pid=pid, base=base)
+				mem_analysis["diffs"]["injected_thread"] = {
+                        "new"           : new_dlldump["data"],
+                        "deleted"       : [],
+                        "star"          : "yes",
+                        "desc"          : "Shows the injected thread",
+                        }
 		    	    elif trigger == "NtSetContextThread -> NtResumeThread":
 				pid = str(args["ProcessId"])
 				tid = int(args["ThreadId"])
-				mem_analysis["diffs"]["injected_thread"] = {"new":[],"deleted":[],"star":"yes", "desc":"Shows the injected thread"}
-				threads = vol.threads(pid=pid)["data"]
-				for t in threads:
-					if t["TID"] == tid:
-						mem_analysis["diffs"]["injected_thread"]["new"].append(t)
+				self.get_injected_thread(pid, tid, mem_analysis)
 		    	    elif trigger == "WriteProcessMemory -> CreateRemoteThread":
-				
 				start = int(args["StartRoutine"], 16)
-				dir1 = tempfile.mkdtemp()
-				dir2 = tempfile.mkdtemp()
 				pid = str(args["ProcessId"])
                                 tid = int(args["ThreadId"])
 				dis = None
@@ -545,15 +553,7 @@ class MemoryAnalysis(object):
                                         dis = disasm_from_memory(self.memfile, int(pid), start, 100)
                                 except:
                                         pass
-
-                                mem_analysis["diffs"]["injected_thread"] = {"new":[],"deleted":[],"star":"yes", "desc":"Shows the injected thread", "disassembly" : dis}
-                                threads = vol.threads(pid=pid)["data"]
-                                for t in threads:
-                                        if t["TID"] == tid:
-                                                mem_analysis["diffs"]["injected_thread"]["new"].append(t)
-
-				utils.remove_dir_safe(dir1)
-				utils.remove_dir_safe(dir2)
+				self.get_injected_thread(pid, tid, mem_analysis, dis)
 
 		return mem_analysis, new_results
 

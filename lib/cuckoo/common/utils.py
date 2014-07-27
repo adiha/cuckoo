@@ -9,6 +9,8 @@ import ntpath
 import string
 import tempfile
 import xmlrpclib
+import errno
+
 from datetime import datetime
 
 from lib.cuckoo.common.exceptions import CuckooOperationalError
@@ -84,7 +86,7 @@ def copy_safe(src, dst):
 	"""
 	try:
 		shutil.copy(src, dst)
-	except OSError as e:
+	except IOError as e:
 		if e.errno != errno.ENOENT:
 			raise
 

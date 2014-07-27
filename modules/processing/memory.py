@@ -13,7 +13,6 @@ import json
 from lib.cuckoo.common.abstracts import Processing
 from lib.cuckoo.common.config import Config
 from lib.cuckoo.common.constants import CUCKOO_ROOT
-from lib.cuckoo.core import scheduler
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
 import lib.cuckoo.common.utils as cuckoo_utils
@@ -1458,7 +1457,7 @@ class VolatilityManager(object):
 					opts.pop("filter")
 				if opts.has_key("desc"):
 					opts.pop("desc")
-				self.vol.results[opt] = getattr(self.vol, opt)(opts)
+				self.vol.results[opt] = getattr(self.vol, opt)(**opts)
 	self.find_taint(self.vol.results)
         self.cleanup()
         self.vol.results = self.mask_filter(self.vol.results)
@@ -1516,6 +1515,7 @@ class Memory(Processing):
 	Gets the clean data for the given machine
 	"""
 	# ADI
+	from lib.cuckoo.core import scheduler
 	for machine in scheduler.machinery.machines():
 		if machine.name == machine_name:
 			return json.loads(machine.clean_volatility)
