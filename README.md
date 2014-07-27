@@ -1,17 +1,67 @@
 Cuckoo Sanbox fork for Memory Analysis.
 
-Enables:
-	* Taking triggered dumps
-	* Using advanced plugins to analyze the memory.
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dependencies</h3>
+<ul class="task-list">
+<li>Cuckoo's dependencies.</li>
+<li>For static analysis of memory, download IDA free 5.0 and then replace its exe with our patched exe (in cuckoo/IDA/idag_patched.exe)</li>
+</ul>
 
-Dependencies:
-	* Cuckoo's dependencies
-	* For static analysis of memory, download IDA free 5.0 and then replace its exe with our patched exe (in cuckoo/IDA/idag_patched.exe)
-	
-Usage:
-	1. Download zip
-	2. Config Cuckoo
-	3. Run cuckoo.py
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h3>
+<ul class="task-list">
+<li>Download zip</li>
+<li>Configure cuckoo</li>
+<li>Run cuckoo.py</li>
+</ul>
 
-Analysis Machine:
-	1. Run CPU.exe on your analysis machine.	
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuring Cuckoo to run memory analysis</h3>
+<ul class="task-list">
+<li>In processing.conf, change the file to the following:
+<pre><code>[memoryanalysis]
+enabled = yes
+</code></pre>
+</li>
+<li>Configure your memory analysis. You can find a new file, memoryanalysis.conf, in which you can set all the parameters for your analysis.</li>
+<li>If you want to use the regular Volatility plugins without doing any diff logic, just configure it in memory.conf, and the results will appear under every dump (the new report format is described in the following section).
+Note: We also wrapped Existing Volatility plugins which were not wrapped by Cuckoo, they can also be used.</li>
+</ul>
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Changes in the report</h3>
+Cuckoo generates a JSON report (the data in it is used to generate the HTML report that can be viewed with the Cuckoo web server).
+We made a few changes in this JSON report to include the memory analysis results, too.
+Before adding our code, the report.json format was:
+<pre><code>
+{
+	'memory' : {
+			'malfind' : {} ...
+		   }
+}
+</code></pre>
+Now, we created a key in the result dictionary for each dump. The value of the key is the result dictionary for this dump.
+The heirarchy looks like that:
+<pre><code>
+{
+	'dumps' : {
+		'Dump_1' : {
+				'path' : '...'
+				'meta' : {
+						'trigger' : {...},
+						'time' : "..."
+					 }
+		
+			   } ,
+		'Dump_2' : {...}
+	}
+}
+</code></pre>
+
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Added Plugins</h3>
+We added plugins which did not exist in Volatility.
+<ul class="task-list">
+<li>Heap entropy: Calculates the current heap entropy of a process.</li>
+<li>AVStrings: Finds Anti-Virus strings in the dump.</li>
+<li>Modified PE Header: Finds incomplete PE headers.</li>
+</ul>
