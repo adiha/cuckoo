@@ -12,13 +12,12 @@ import json
 
 from lib.cuckoo.common.abstracts import Processing
 from lib.cuckoo.common.config import Config
-from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.common.constants import *
 from modules.processing.static import PortableExecutable
 import modules.processing.virustotal as vt
 import lib.cuckoo.common.utils as cuckoo_utils
 
 import memoryanalysis
-import memoryanalysisconsts
 
 try:
     import volatility.conf as conf
@@ -141,7 +140,7 @@ class VolatilityAPI(object):
 	else:
 		res = self.strings()
 	return dict(config={}, 
-                    data=self.find_strings([d['string'] for d in res['data']], memoryanalysisconsts.AV_NAMES + memoryanalysisconsts.AV_PROCESS_NAMES)['data'])
+                    data=self.find_strings([d['string'] for d in res['data']], AV_NAMES + AV_PROCESS_NAMES)['data'])
     
     # CHANGED: Added this logic
     def find_strings_from_list(self, lst):
