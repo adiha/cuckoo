@@ -20,7 +20,7 @@ from lib.cuckoo.common.constants import CUCKOO_GUEST_PORT, CUCKOO_GUEST_INIT
 from lib.cuckoo.common.constants import CUCKOO_GUEST_COMPLETED
 from lib.cuckoo.common.constants import CUCKOO_GUEST_FAILED
 from lib.cuckoo.common.exceptions import CuckooGuestError
-from lib.cuckoo.common.utils import TimeoutServer, sanitize_filename
+from lib.cuckoo.common.utils import create_dir_safe, TimeoutServer, sanitize_filename, ResumableTimer
 
 log = logging.getLogger(__name__)
 
@@ -192,13 +192,12 @@ class GuestManager:
         abort = Event()
         abort.clear()
 
-        #def die():
-        #    abort.set()
+        def die():
+            abort.set()
 
-        #timer = Timer(self.timeout, die)
-        #timer.start()
-        self.server._set_timeout(self.timeout)
-	ev = threading.Event("stopevent")
+	resumableTimer = ResumableTimer(self.timeout, die)
+	resumableTimer.start()
+	
 	sec_counter = 0
 	i = 1
 	mem_analysis_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
@@ -206,26 +205,14 @@ class GuestManager:
         number_of_dumps = int(mem_analysis_conf.basic.max_number_of_dumps)
         memory_results_dir = os.path.join(storage, "memory")
         dumps_dir = os.path.join(memory_results_dir, "dumps")
-	try:
-                os.mkdir(memory_results_dir)
-                os.mkdir(dumps_dir)
-	except:
-		pass
+        create_dir_safe(memory_results_dir)
+        create_dir_safe(dumps_dir)
         while True:
             time.sleep(1)
-	    # ADI
-	    while ev.is_set():
-		time.sleep(1)
-            # If the analysis hits the critical timeout, just return straight
-            # straight away and try to recover the analysis results from the
-            # guest.
-            #if abort.is_set():
-	    if sec_counter == self.timeout:
-                raise CuckooGuestError("The analysis hit the critical timeout,"
-                                       " terminating")
 	    sec_counter += 1
 	    if mem_analysis_conf.basic.time_based and sec_counter % time_to_sleep == 0:
-                dump_dir = os.path.join(dumps_dir, str(i))
+                resumableTimer.stop()
+		dump_dir = os.path.join(dumps_dir, str(i))
                 os.mkdir(dump_dir)
 		log.info("Dumping memory after %d seconds..." % sec_counter)
                 machinery.dump_memory(machine.label,
@@ -234,6 +221,7 @@ class GuestManager:
             	json.dump(info_dict, file(os.path.join(dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
 
 		i += 1
+		resumableTimer.resume()
             try:
                 status = self.server.get_status()
             except Exception as e:
