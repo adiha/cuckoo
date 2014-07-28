@@ -105,3 +105,7 @@ We added plugins which did not exist in Volatility.
 <li>AVStrings: Finds Anti-Virus strings in the dump.</li>
 <li>Modified PE Header: Finds incomplete PE headers.</li>
 </ul>
+
+<h3>
+<a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Changes Log</h3>
+Changes were made in Cuckoo's core and different modules to enable triggering dumps. Before every change, a comment "CHANGED: [..]" was added.
