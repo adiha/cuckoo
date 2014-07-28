@@ -13,7 +13,7 @@ import json
 import sys
 
 from lib.cuckoo.common.config import Config
-from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.common.constants import CUCKOO_ROOT, PAGE_PROTECTIONS
 from lib.cuckoo.common.exceptions import CuckooOperationalError
 from lib.cuckoo.common.exceptions import CuckooCriticalError
 from lib.cuckoo.common.exceptions import CuckooResultError
@@ -50,7 +50,7 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
         self.analysistasks = {}
         self.analysishandlers = {}
 
-	# ADI
+	# CHANGED: Save info about APIs, BPs and times for each trigger.
 	self.apis = {}
 	self.bps = []
 	self.volshell_bps = []
@@ -74,11 +74,10 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
             self.servethread.setDaemon(True)
             self.servethread.start()
 
-    # ADI
+    # CHANGED: Added setters and getters
     def set_machinery(self, machinery):
 	self.machinery = machinery
 
-    # ADI
     def set_apis(self, id, apis):
 	if not self.apis.has_key(id):
 		self.apis[id] = []
@@ -307,11 +306,11 @@ class Resulthandler(SocketServer.BaseRequestHandler):
         if self.rawlogfd:
             self.rawlogfd.close()
         log.debug("Connection closed: {0}:{1}".format(ip, port))
-    # ADI
+    # CHANGED: Added functions to suspend & resume machine to enable VMI introspection.
     def suspend_machine(self):
 	machine = self.server.analysistasks.values()[0][1].label
 	self.server.machinery.suspend(machine)
-    # ADI
+    
     def resume_machine(self):
 	machine = self.server.analysistasks.values()[0][1].label
 	self.server.machinery.resume(machine)
@@ -335,11 +334,6 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 					col = 31
 				else:
 					col = 0
-				#if arg == "Buffer":
-				#	try:
-				#		val = val.decode("hex")
-				#	except:
-				#		pass
 				print(color("%s : %s" % (arg, str(val)), col))
 			sys.stdout.flush()
 			if len (os.listdir(mem_dir)) == 0:
@@ -355,8 +349,7 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 			timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
 			info_dict = {"trigger" : {"name" : trigger, "args" : args}, "time": str(timestamp)}
 			if trigger == "VirtualProtectEx":
-				import modules.processing.memoryanalysisconsts as memoryanalysisconsts
-				info_dict["Protection_Verbal"] = memoryanalysisconsts.PAGE_PROTECTIONS[int(args['Protection'], 16)]	
+				info_dict["Protection_Verbal"] = PAGE_PROTECTIONS[int(args['Protection'], 16)]	
 			json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
 		else:
 			log.warn("Reached maximum number of memory dumps. Quitting dump")

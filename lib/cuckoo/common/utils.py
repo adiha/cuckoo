@@ -169,7 +169,7 @@ def store_temp_file(filedata, filename):
 
     return tmp_file_path
 
-#ADI
+# Changed: Added this class
 class _ResumableTimer(Thread):
     """Call a function after a specified number of seconds:
 

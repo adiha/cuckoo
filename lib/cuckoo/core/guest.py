@@ -172,7 +172,6 @@ class GuestManager:
                                            "analysis machine, not enough "
                                            "memory".format(self.id))
 
-            #ADI: removed: Launch the analyzer.
             pid = self.server.execute()
             log.debug("%s: analyzer started with PID %d", self.id, pid)
         # If something goes wrong when establishing the connection, raise an

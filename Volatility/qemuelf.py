@@ -38,7 +38,7 @@ class QemuCoreDumpElf(addrspace.AbstractRunBasedMemory):
     """ This AS supports Qemu ELF coredump format """
 
     order = 30
-    # ADI
+    # CHANGED: DTB cannot be found in Qemu ELF coredump files.
     dtb = 3063808
 
     def __init__(self, base, config, **kwargs):

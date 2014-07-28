@@ -41,7 +41,7 @@ TASK_FAILED_PROCESSING = "failed_processing"
 # Secondary table used in association Machine - Tag.
 machines_tags = Table("machines_tags", Base.metadata,
     Column("machine_id", Integer, ForeignKey("machines.id")),
-    Column("tag_id", Integer, ForeignKey("tags.id"))
+    Column("tag_id", Integer, ForeignKey("tags.id")),
 )
 
 # Secondary table used in association Task - Tag.
@@ -452,7 +452,7 @@ class Database(object):
             session.rollback()
         finally:
             session.close()
-    # ADI
+    # CHANGED: Now saves the volatility clean data (runs once for each machine)
     def set_machine_clean_volatility_data(self, machine_name, vol_data):
         session = self.Session()
 	try:

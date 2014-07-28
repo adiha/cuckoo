@@ -97,7 +97,7 @@ class VolatilityAPI(object):
         return self.config
 
 
-    # ADI
+    # CHANGED: Added this logic
     def strings(self):
 	"""
 	Returns a list of strings found in the memory dump.
@@ -114,7 +114,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=list(set(results)))
 
-    # ADI
+    # CHANGED: Added this logic
     def find_strings(self, strs, lst):
 	"""
 	Returns a list of found strings from a prepared list
@@ -131,7 +131,7 @@ class VolatilityAPI(object):
 	return dict(config={}, data=[{"string" : s} for s in suspicious_found_strings]
 )
 
-    # ADI
+    # CHANGED: Added this logic
     def avstrings(self):
 	"""
 	Finds Anti-Virus strings in the dump.
@@ -142,7 +142,8 @@ class VolatilityAPI(object):
 		res = self.strings()
 	return dict(config={}, 
                     data=self.find_strings([d['string'] for d in res['data']], memoryanalysisconsts.AV_NAMES + memoryanalysisconsts.AV_PROCESS_NAMES)['data'])
-    # ADI
+    
+    # CHANGED: Added this logic
     def find_strings_from_list(self, lst):
 	if self.results.has_key("strings"):
 		res = self.results["strings"]
@@ -152,7 +153,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=self.find_strings([d['string'] for d in res['data']], lst)['data'])
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def patcher(self, xml_path):
         """Volatility patcher plugin.
 	@see volatility/plugins/patcher.py
@@ -171,7 +172,7 @@ class VolatilityAPI(object):
 	os.remove(resfile)
 	return dict(config={}, patches=patches, data=[res])
 
-    # ADI: Added parent process name
+    # CHANGED: Added parent process name
     def pslist(self):
         """Volatility pslist plugin.
         @see volatility/plugins/taskmods.py
@@ -211,7 +212,7 @@ class VolatilityAPI(object):
 	            results.append(new)
 	return dict(config={}, 
 		    data=results)
-    # ADI
+    # CHANGED: Added this plugin wrap
     def threads(self, filter=None, pid=None):
         """Volatility threads plugin.
         @see volatility/plugins/malware/threads.py
@@ -239,7 +240,7 @@ class VolatilityAPI(object):
         return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin & logic
     def heapentropy(self, pid=None):
         """Our heapentropy plugin.
         @see volatility/plugins/heap_entropy.py
@@ -262,7 +263,7 @@ class VolatilityAPI(object):
 	return dict(config={"PID": pid}, data=entropies)
 
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def impscan(self, pid=None):
         """Volatility impscan plugin.
         @see volatility/plugins/malware/impscan.py
@@ -288,7 +289,7 @@ class VolatilityAPI(object):
 	    results.append(new)
 	return dict(config={"PID": pid}, data=results)
 
-    # ADI
+    # CHANGED: Added this logic
     def impscan_all_processes(self):
 	results = []
 	if self.results.has_key("psxview"):
@@ -306,7 +307,7 @@ class VolatilityAPI(object):
 			pass
 	return dict(config={}, data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def malsysproc(self):
         """Volatility malsysproc plugin.
         @see volatility/plugins/malsysproc.py
@@ -336,7 +337,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this logic
     def find_suspicious_windows_processes(self):
 	"""
 	Find suspicious processes according to their PIDs, cmdlines, priority, etc.
@@ -419,7 +420,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-     # ADI
+     # CHANGED: Added this plugin wrap
     def yarascan(self, rule_file, is_kernel=True):
         """Volatility yarascan plugin.
         @see volatility/plugins/malware/malfind.py
@@ -456,7 +457,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def procexedump(self, dump_dir=None, pid=None):
         """Volatility procexedump plugin.
         """
@@ -483,7 +484,7 @@ class VolatilityAPI(object):
 	command.render_text(file(r"/dev/null","wb"), data2)	
         return dict(config={"dump_dir":dump_dir}, 
 		    data=results)
-    # ADI
+    # CHANGED: Added this plugin wrap
     def moddump(self, dump_dir=None, base=None):
         """Volatility moddump plugin.
         """
@@ -536,7 +537,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def dlldump(self, dump_dir=None, pid=None, base=None, regex=None):
         """Volatility dlldump plugin.
         @see volatility/plugins/dlldump.py
@@ -571,7 +572,7 @@ class VolatilityAPI(object):
 		    result=result, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this logic
     def modified_pe_header(self):
 	"""
 	Searches for modified PE header using yara signature.
@@ -586,7 +587,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=res)
 
-    # ADI    
+    # CHANGED: Added this plugin wrap
     def connscan(self):
         """Volatility connscan plugin.
         @see volatility/plugins/connscan.py
@@ -613,7 +614,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
     
-    # ADI
+    # CHANGED: Added this plugin wrap
     def connections(self):
         """Volatility connections plugin.
         @see volatility/plugins/connections.py
@@ -640,7 +641,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def sockscan(self):
         """Volatility sockscan plugin.
         @see volatility/plugins/sockscan.py
@@ -666,7 +667,7 @@ class VolatilityAPI(object):
 	return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def sockets(self):
         """Volatility sockets plugin.
         @see volatility/plugins/sockets.py
@@ -691,7 +692,7 @@ class VolatilityAPI(object):
 
 	return dict(config={}, 
 		    data=results)
-    # ADI
+    # CHANGED: Added this plugin wrap
     def hivelist(self):
         """Volatility hivelist plugin.
         @see volatility/plugins/regustry/hivelist.py
@@ -792,7 +793,7 @@ class VolatilityAPI(object):
         return dict(config={}, 
 		    data=results)
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def eventhooks(self):
 	"""Volatility eventhooks plugin.
         @see volatility/plugins/gui/eventhooks.py
@@ -957,7 +958,7 @@ class VolatilityAPI(object):
                 results.append(new)
 
         return dict(config={}, data=results)
-    # ADI
+    # CHANGED: Added this logic
     def get_vad_data(self, vad, address_space):
     	offset = vad.Start
     	out_of_range = vad.Start + vad.Length
@@ -969,7 +970,7 @@ class VolatilityAPI(object):
         	offset += to_read
     	return data
 
-    # ADI
+    # CHANGED: Added this plugin wrap
     def vadwalk(self):
         """Volatility vadwalk plugin.
         @see volatility/plugins/vadinfo.py
@@ -1005,7 +1006,7 @@ class VolatilityAPI(object):
 
 
 
-    # ADI: added dump_dir and pid
+    # CHANGED: added dump_dir, pid, add_data and ignore_protect params.
     def malfind(self, dump_dir=None, pid=None, add_data=False, ignore_protect=False, address=None):
         """Volatility malfind plugin.
         @param dump_dir: optional directory for dumps
@@ -1055,7 +1056,7 @@ class VolatilityAPI(object):
         return dict(config={'dump_dir' : dump_dir},
 		    data=results)
 
-    # ADI: added pid option
+    # CHANGED: added pid option
     def apihooks(self, pid=None):
         """Volatility apihooks plugin.
         @see volatility/plugins/malware/apihooks.py
@@ -1407,7 +1408,6 @@ class VolatilityManager(object):
         self.taint_pid = set()
         self.memfile = memfile
 	self.output_dir = output_dir
-	# ADI: If we don't have clean data, we are running on the clean dump!
 	self.is_clean = clean_data is None
 	self.clean_data = clean_data
 	self.clean_dump = clean_dump
@@ -1447,7 +1447,7 @@ class VolatilityManager(object):
         self.vol = VolatilityAPI(self.memfile, self.osprofile, self.is_clean)
 
 	if not self.is_clean:
-		# ADI: We don't want to run if it's running on the clean dump for memory analysis purposes. 
+		# We don't want to run if it's running on the clean dump for memory analysis purposes. 
 		sections = [s for s in dir(self.voptions) if s != "get" and not s.startswith("_")]
 		for opt in sections:
 			opts = getattr(self.voptions, opt)
@@ -1462,7 +1462,7 @@ class VolatilityManager(object):
         self.cleanup()
         self.vol.results = self.mask_filter(self.vol.results)
 	
-	# ADI: Added memory analysis module
+	# CHANGED: Added memory analysis module
 	
 	mem_analysis = {}
 	new_results = {}
@@ -1509,17 +1509,17 @@ class VolatilityManager(object):
 
 class Memory(Processing):
     """Volatility Analyzer."""
-    # ADI
+    # CHANGED: Added this logic
     def get_machine_volatility_data(self, machine_name):
 	"""
 	Gets the clean data for the given machine
 	"""
-	# ADI
 	from lib.cuckoo.core import scheduler
 	for machine in scheduler.machinery.machines():
 		if machine.name == machine_name:
 			return json.loads(machine.clean_volatility)
 
+    # CHANGED: Added this logic
     @staticmethod
     def should_compare_to_previous():
 	"""
@@ -1538,7 +1538,7 @@ class Memory(Processing):
         self.key = "memory"
         results = {}
         if HAVE_VOLATILITY:
-	    # ADI: Get previous volatility data if we already have it.
+	    # Get previous volatility data if we already have it.
             vol_data = self.get_machine_volatility_data(self.task['machine'])
 	    vol_dump = None
 	    for mem_dir in sorted(os.listdir(self.memory_dumps_dir_path), key=int):

@@ -199,5 +199,5 @@ def init_modules():
                 log.debug("\t `-- %s", entry.__name__)
             else:
                 log.debug("\t |-- %s", entry.__name__)
-    # ADI
+    # CHANGED: Added this event.
     e = threading.Event("stopevent")

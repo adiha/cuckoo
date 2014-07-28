@@ -479,7 +479,7 @@ class Scheduler:
                                     "storage",
                                     "analyses",
 				     "%s_clean.dmp" % machine.name)
-			# ADI: take initial memory dump if memory analysis option is enabled
+			# CHANGED: Take initial memory dump if memory analysis option is enabled
 			log.info("Dumping clean dump of machine: %s" % machine.label)
 			machinery.dump_memory(machine.label, machine.dump_path)
 			# Collect volatility info on clean dump

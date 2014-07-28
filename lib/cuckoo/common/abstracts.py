@@ -326,12 +326,12 @@ class LibVirtMachinery(Machinery):
         # currently still active.
         super(LibVirtMachinery, self)._initialize_check()
 
-    # ADI
+    # CHANGED: Added suspend & resume to enable VMI introspection.
     def suspend(self, label):
 	log.info("Suspending machine %s" % label)
 	machine = self.vms[label]
 	machine.suspend()
-    # ADI
+    
     def resume(self, label):
 	log.info("Resuming machine %s" % label)
 	machine = self.vms[label]

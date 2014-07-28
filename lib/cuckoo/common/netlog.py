@@ -42,10 +42,11 @@ from lib.cuckoo.common.colors import color, yellow
 log = logging.getLogger(__name__)
 
 
-# ADI
+# CHANGED: Added this function to enable stopping the analysis machine.
 def set_event():
 	threading.Event("stopevent").set()
-# ADI
+
+# CHANGED: Added this function to enable stopping the analysis machine.
 def clear_event():
 	threading.Event("stopevent").clear()
 
@@ -273,7 +274,7 @@ class BsonParser(object):
         self.infomap = {}
         if not HAVE_BSON:
             log.critical("Starting BsonParser, but bson is not available! (install with `pip install bson`)")
-    # ADI
+    # CHANGED: Added functions to enable breakpoints on triggers.
     def execute_trigger_parameters(self, apiname, argdict):
 	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 	if conf.basic.trigger_based and hasattr(conf, "Trigger_" + apiname) and getattr(conf, "Trigger_" + apiname).enabled and hasattr(self.handler, "server") and self.handler.get_times(apiname) > 0:
@@ -301,6 +302,7 @@ class BsonParser(object):
 	Sets a new API breakpoint
 	"""
 	self.handler.set_bp(api)
+
     def set_volshell_bp(self, api):
 	"""
 	Sets a new API breakpoint
@@ -310,24 +312,7 @@ class BsonParser(object):
     def call_volshell(self):
 	set_event()
 	self.handler.suspend_machine()
-	#os.system("sudo vol.py volshell -w -l vmi://XP")
-	log.info("Volshell is ready")
-	#import Tkinter;root=Tkinter.Tk();root.withdraw()
-	#import tkMessageBox
-	#tkMessageBox.showinfo("Volshell","Volshell is ready")
-	
-	"""
-	try:
-		tkSimpleDialog.askstring("title","hi")
-	except:
-		pass
-	
-	tkSimpleDialog.mainloop(0)
-	"""
-	#import pdb;pdb.set_trace()
-	while not os.path.exists("/tmp/marker"):
-		time.sleep(1)
-	os.remove("/tmp/marker")
+	os.system("sudo vol.py volshell -w -l vmi://XP")
 	self.handler.resume_machine()
 	clear_event()
 
@@ -406,10 +391,9 @@ class BsonParser(object):
                 return True
             argdict = dict((argnames[i], converters[i](args[i]))
                            for i in range(len(args)))
-	    # ADI
+	    # CHANGED: Save all APIs to keep track of them and enable triggering.
 	    if hasattr(self.handler, "set_apis"):
 	    	self.handler.set_apis([(apiname, argdict)])
-	    	#self.apis.append([apiname, argdict])
             if apiname == "__process__":
                 # special new process message from cuckoomon
                 timelow = argdict["TimeLow"]
