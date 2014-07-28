@@ -1,5 +1,4 @@
 import copy
-import memoryanalysisconsts
 import os			
 import re
 import tempfile
@@ -11,7 +10,7 @@ import logging
 
 from lib.cuckoo.common.config import Config
 import lib.cuckoo.common.utils as utils
-from lib.cuckoo.common.constants import CUCKOO_ROOT, CUCKOO_GUEST_PORT
+from lib.cuckoo.common.constants import *
 from modules.processing.static import PortableExecutable
 
 import modules.processing.memory
@@ -266,7 +265,7 @@ class MemoryAnalysis(object):
 		proclist = self.get_new_processes(old, new, deps)
 		hidden = []
 		for proc in proclist:
-			for rule in memoryanalysisconsts.PSXSCAN_RULES:
+			for rule in PSXSCAN_RULES:
 				should_add = True
 				for (attr, val) in rule.iteritems():
 					if proc[attr] != val:
@@ -300,7 +299,7 @@ class MemoryAnalysis(object):
 		for new_handle in new[deps[0]]['data']:
 			is_autostart = False
 			if new_handle['handle_type'] == 'Key':
-				for k in memoryanalysisconsts.AUTOSTART_REG_KEYS:
+				for k in AUTOSTART_REG_KEYS:
 					if k in new_handle["handle_value"].lower():
 						is_autostart = True
 						break
@@ -414,15 +413,15 @@ class MemoryAnalysis(object):
 		Old objects are found by detecting artifacts that exist in the old dump, but not in the new one.
 		"""
 		desc = getattr(self.voptions, memfunc).desc
-		deps = memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
+		deps = MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
 		for dep in deps:
 			if not clean.has_key(dep):
 				clean[dep] = getattr(self.clean_vol, dep)()
 			if not new_results.has_key(dep):
 				new_results[dep] = getattr(self.vol, dep)()
 
-		if memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS.has_key(memfunc):
-                	analysis_func = getattr(self, memoryanalysisconsts.MEMORY_ANALYSIS_FUNCTIONS[memfunc])
+		if MEMORY_ANALYSIS_FUNCTIONS.has_key(memfunc):
+                	analysis_func = getattr(self, MEMORY_ANALYSIS_FUNCTIONS[memfunc])
                 else:
                         analysis_func = self.get_new_objects
 		if not mem_analysis["diffs"].has_key(memfunc):
@@ -450,7 +449,7 @@ class MemoryAnalysis(object):
                         utils.create_dir_safe(dlls_dir)
 			utils.create_dir_safe(drivers_dir)
 			utils.create_dir_safe(malfinds_dir)
-		for mem_analysis_name, dependencies in memoryanalysisconsts.MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
+		for mem_analysis_name, dependencies in MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
 			attrs = getattr(self.voptions, mem_analysis_name)
 			if attrs.enabled:
 				log.info("Running plugin: %s" % mem_analysis_name)
@@ -483,8 +482,8 @@ class MemoryAnalysis(object):
 				if not mem_analysis["diffs"].has_key(plugin):
                                 	self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)
 			if smart_analysis:
-			    if memoryanalysisconsts.TRIGGER_PLUGINS.has_key(trigger):
-				for plugin in memoryanalysisconsts.TRIGGER_PLUGINS[trigger]:
+			    if TRIGGER_PLUGINS.has_key(trigger):
+				for plugin in TRIGGER_PLUGINS[trigger]:
 					if not mem_analysis["diffs"].has_key(plugin):
 						self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)			
 					mem_analysis["diffs"][plugin]["star"] = "yes"
@@ -520,7 +519,7 @@ class MemoryAnalysis(object):
 							if dlldump["data"] != []:
 								mem_analysis["diffs"]["injected_dll"]["new"].append(dlldump["data"][0])	
 			    elif trigger == "VirtualProtectEx":
-				verbal_protect = memoryanalysisconsts.PAGE_PROTECTIONS[int(args["Protection"],16)]
+				verbal_protect = PAGE_PROTECTIONS[int(args["Protection"],16)]
 				protect_vad_val = [key for key,val in vadinfo.PROTECT_FLAGS.iteritems() if val == verbal_protect][0]
         			if "EXECUTE" in verbal_protect:
 					mem_analysis["diffs"]["diff_malfind"]["new"].append(self.vol.malfind(dump_dir=malfinds_dir, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
