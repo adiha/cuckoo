@@ -13,7 +13,7 @@ Cuckoo Sanbox fork for Memory Analysis.
 <h3>
 <a name="user-content-authors" class="anchor" href="#dependencies" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h3>
 <ul class="task-list">
-<li>Download zip</li>
+<li>Download zip and extract (ready for immidiate usage, no overriding files needed)</li>
 <li>Configure cuckoo</li>
 <li>Run cuckoo.py</li>
 </ul>
