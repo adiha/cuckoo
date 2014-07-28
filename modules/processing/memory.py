@@ -1535,7 +1535,7 @@ class Memory(Processing):
         @return: volatility results dict.
         """
 	
-        self.key = "dumps"
+        self.key = "memory"
         results = {}
         if HAVE_VOLATILITY:
 	    # ADI: Get previous volatility data if we already have it.
