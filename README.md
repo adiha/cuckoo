@@ -8,6 +8,7 @@ Cuckoo Sanbox fork for Memory Analysis.
 <li>If yoy want to use our heap entropy calculator plugin, copy heap_entropy.py from Volatility directory (under master dir) to the Volatility plugins directory.</li>
 <li>In order to use the monitorCPU trigger, you will have to run CPU.exe on your analysis machine.</li>
 <li>In order to enable taking dumps and resuming execution, a few changes had to be made in cuckoomon.dll. The cuckoomon version that is supplied in this fork is not the one that was released with cuckoo 1.0. Make sure you use the version supplied by us.</li>
+<li>It is recommended to use QEMU virtualization to enable VMI introspection. In order to do so, you should install your Cuckoo on Ubuntu and install the following software: Qemu 1.7.0, libvirt 1.0 and libvmi. To enable live introspection and patching the memory dump with Volatility, you will have to add the qemu addrspace plugin (if you are using Volatility 2.4, it comes with the default installation and no need in adding anything). The plugin can be found under our Volatility directory and should be placed in volatility/plugins/addrspaces/qemuelf.py.</li>
 </ul>
 
 <h3>
