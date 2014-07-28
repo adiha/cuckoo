@@ -312,7 +312,8 @@ class BsonParser(object):
     def call_volshell(self):
 	set_event()
 	self.handler.suspend_machine()
-	os.system("sudo vol.py volshell -w -l vmi://XP")
+	analysis_machine = self.handler.get_analysis_machine()
+	os.system("sudo vol.py volshell -w -l vmi://%s" % analysis_machine)
 	self.handler.resume_machine()
 	clear_event()
 

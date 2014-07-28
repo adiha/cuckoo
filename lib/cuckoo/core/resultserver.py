@@ -307,6 +307,8 @@ class Resulthandler(SocketServer.BaseRequestHandler):
             self.rawlogfd.close()
         log.debug("Connection closed: {0}:{1}".format(ip, port))
     # CHANGED: Added functions to suspend & resume machine to enable VMI introspection.
+    def get_analysis_machine(self):
+	return self.server.analysistasks.values()[0][1].label
     def suspend_machine(self):
 	machine = self.server.analysistasks.values()[0][1].label
 	self.server.machinery.suspend(machine)
