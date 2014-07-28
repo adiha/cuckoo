@@ -1541,7 +1541,7 @@ class Memory(Processing):
 	    # ADI: Get previous volatility data if we already have it.
             vol_data = self.get_machine_volatility_data(self.task['machine'])
 	    vol_dump = None
-	    for mem_dir in sorted(os.listdir(self.memory_dumps_dir_path)):
+	    for mem_dir in sorted(os.listdir(self.memory_dumps_dir_path), key=int):
 		mem = os.path.join(self.memory_dumps_dir_path, mem_dir, "memory.dmp")
 		if mem and os.path.exists(mem):
                 	try:
