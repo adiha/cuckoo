@@ -274,10 +274,18 @@ class BsonParser(object):
         self.infomap = {}
         if not HAVE_BSON:
             log.critical("Starting BsonParser, but bson is not available! (install with `pip install bson`)")
+    
     # CHANGED: Added functions to enable breakpoints on triggers.
     def execute_trigger_parameters(self, apiname, argdict):
 	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 	if conf.basic.trigger_based and hasattr(conf, "Trigger_" + apiname) and getattr(conf, "Trigger_" + apiname).enabled and hasattr(self.handler, "server") and self.handler.get_times(apiname) > 0:
+		
+		# If CurrentProcessId & ProcessId exist, check they are different.
+		# This helps in reducing the number of triggers in APIs like VirtualProtectEx or WriteProcessMemory.
+		if argdict.has_key("CurrentProcessId") and argdict.has_key("ProcessId") and argdict["CurrentProcessId"] == argdict["ProcessId"]:
+			return
+		if argdict.has_key("Buffer"):
+			argdict['Buffer'] = argdict['Buffer'].encode("hex")
 		self.handler.reduce_times(apiname)
 		trig_options = getattr(conf, "Trigger_" + apiname)
 		if trig_options.dump_memory:
@@ -417,45 +425,10 @@ class BsonParser(object):
                 pid = argdict["ProcessIdentifier"]
                 self.handler.log_thread(context, pid)
                 return True
-	    elif apiname == "VirtualProtectEx":
-		if hasattr(self.handler,"server") and argdict["CurrentProcessId"] != argdict["ProcessId"]:
-			self.execute_trigger_parameters(apiname, argdict)
- 	    elif apiname == "monitorCPU":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "NtCreateProcess":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "monitorUnpacking":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "UnhookWindowsHookEx":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "StartServiceA" or apiname == "StartServiceW":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "SetWinEventHook":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "socket":
-                self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "SetWindowsHookExW" or apiname == "SetWindowsHookExA":
-	    	self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "ZwLoadDriver":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "NtCreateFile":
-	    	filename = argdict['FileName'].lower()
-	    	if hasattr(self.handler,"server") and (".sys" in filename or not ":\\" in filename) and (not "system32" in filename):
-                        self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "NtCreateMutant":
-		self.execute_trigger_parameters(apiname, argdict)
-	    elif apiname == "WriteProcessMemory":
-		#pid = argdict.pop('ProcessId')
-		#base = argdict['BaseAddress']
-		argdict['Buffer'] = argdict['Buffer'].encode("hex")
-		#handle = argdict["ProcessHandle"]
-		if argdict["ProcessId"] != argdict["CurrProcessId"]:
-			self.execute_trigger_parameters(apiname, argdict)
 	    elif apiname == "NtResumeThread":
-		if hasattr(self.handler, "server"): #and 'CreateRemoteThread' in self.handler.server.apis:
+		if hasattr(self.handler, "server"):
                         set_thread_args = None
                         for api in self.handler.get_apis():
-                        #for api in self.apis:
 			    if type(api) == tuple:
                                 name = api[0]
                                 args = api[1]
@@ -469,7 +442,6 @@ class BsonParser(object):
 		write_proc_args = None
 		if hasattr(self.handler, "server"):
                 	for api in self.handler.get_apis():
-                	#for api in self.apis:
 			    if type(api) == tuple:
                 		name = api[0]
                         	args = api[1]
@@ -478,14 +450,12 @@ class BsonParser(object):
                         	        break
                 	if write_proc_args is not None:
 				self.execute_trigger_parameters("WriteProcessMemory -> CreateRemoteThread", argdict)
-                #pid = argdict.pop('ProcessId')
 		
 	    elif apiname == "LdrLoadDll":
-		if hasattr(self.handler, "server"): #and 'CreateRemoteThread' in self.handler.server.apis:
+		if hasattr(self.handler, "server"):
 			write_proc_args = None
 			apis = self.handler.get_apis()
 			for api in apis:
-			#for api in self.apis:
 			    if type(api) == tuple:
 				name = api[0]
 				args = api[1]
@@ -493,7 +463,6 @@ class BsonParser(object):
 					write_proc_args = args
 					break
 			if write_proc_args is not None:
-				#for api in self.handler.server.apis:
 				for api in apis:
 				    if type(api) == tuple:
 	                                name = api[0]
@@ -505,8 +474,8 @@ class BsonParser(object):
 								self.handler.remove_from_apis(('WriteProcessMemory', write_proc_args))
 								self.handler.remove_from_apis((name, args))
 								break
-			#self.handler.remove_from_apis(['CreateRemoteThread'])
-            
+            else:
+	    	self.execute_trigger_parameters(apiname, argdict)
             context[1] = argdict.pop("is_success", 1)
             context[2] = argdict.pop("retval", 0)
             arguments = argdict.items()
