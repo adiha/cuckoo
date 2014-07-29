@@ -485,6 +485,7 @@ class MemoryAnalysis(object):
 			    if TRIGGER_PLUGINS.has_key(trigger):
 				for plugin in TRIGGER_PLUGINS[trigger]:
 					if not mem_analysis["diffs"].has_key(plugin):
+						log.info("Running plugin: %s" % plugin)
 						self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)			
 					mem_analysis["diffs"][plugin]["star"] = "yes"
 

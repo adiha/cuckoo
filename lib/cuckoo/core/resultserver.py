@@ -318,6 +318,7 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 	self.server.machinery.resume(machine)
 
     def dump_memory(self, trigger, args):
+	timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
 	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 	max_number_of_dumps = int(conf.basic.max_number_of_dumps)
 	chose_triggered = conf.basic.trigger_based
@@ -348,10 +349,7 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 				pass
 			dump_path = os.path.join(mem_dir, dump_dir, "memory.dmp")
 			self.server.machinery.dump_memory(machine, dump_path)
-			timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
 			info_dict = {"trigger" : {"name" : trigger, "args" : args}, "time": str(timestamp)}
-			if trigger == "VirtualProtectEx":
-				info_dict["Protection_Verbal"] = PAGE_PROTECTIONS[int(args['Protection'], 16)]	
 			json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
 		else:
 			log.warn("Reached maximum number of memory dumps. Quitting dump")
