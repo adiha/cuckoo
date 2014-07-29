@@ -102,6 +102,8 @@ class MemoryAnalysis(object):
 		"""
 		Runs each dependency if its result does not already exist  
 		"""
+		if attrs.has_key("desc"):
+			attrs.pop("desc")
 		for dep in dependencies:
 			if not results.has_key(dep):
 				results[dep] = getattr(self.vol_manager, dep)(**attrs)
@@ -248,7 +250,8 @@ class MemoryAnalysis(object):
 				for old_driver in old_drivers:
 					old_devices = old_driver["devices"]
 					for old_device in old_devices:
-						if old_device["device_name"] == new_device["device_name"] and old_device["device_type"] == new_device["device_type"]:
+						if old_device["device_name"] == new_device["device_name"] and \
+						   old_device["device_type"] == new_device["device_type"]:
 							is_new = False
 							break
 					if not is_new:
@@ -286,7 +289,8 @@ class MemoryAnalysis(object):
 
                 # Copy new drivers to dir
                 for new_driver in res:
-			utils.copy_safe(new["moddump"]["config"]["dump_dir"] + "/driver.{0:x}.sys".format(new_driver["module_base"]), moddir + new_driver["module_name"])
+			utils.copy_safe(new["moddump"]["config"]["dump_dir"] + \
+			"/driver.{0:x}.sys".format(new_driver["module_base"]), moddir + new_driver["module_name"])
 		utils.remove_dir_safe(old["moddump"]["config"]["dump_dir"])
 		utils.remove_dir_safe(new["moddump"]["config"]["dump_dir"])
 		return res
@@ -324,11 +328,12 @@ class MemoryAnalysis(object):
 		Adds information about the injected thread.
 		"""
 		mem_analysis["diffs"]["injected_thread"] = {
-			"new" 		: [],
-			"deleted"	: [],
-			"star"		: "yes", 
-			"desc"		: "Shows the injected thread", 
-			"disassembly" 	: dis}
+								"new" 		: [],
+								"deleted"	: [],
+								"star"		: "yes", 
+								"desc"		: "Shows the injected thread", 
+								"disassembly" 	: dis
+							   }
                 threads = self.vol.threads(pid=pid)["data"]
                 for t in threads:
                 	if t["TID"] == tid:
@@ -360,7 +365,8 @@ class MemoryAnalysis(object):
 				os.remove(r'/tmp/functions')
 			except:
 				pass
-			command = r'wine "C:\Program Files (x86)\IDA Free\idag_patched.exe" -A -S"%s/IDA/script.idc" "%s" &' % (CUCKOO_ROOT, new_exe_full_path)
+			command = r'wine "C:\Program Files (x86)\IDA Free\idag_patched.exe" \
+				  -A -S"%s/IDA/script.idc" "%s" &' % (CUCKOO_ROOT, new_exe_full_path)
             		os.system(command)
             		time.sleep(30)
             		os.system("pkill idag_patched")
@@ -413,6 +419,8 @@ class MemoryAnalysis(object):
 		Old objects are found by detecting artifacts that exist in the old dump, but not in the new one.
 		"""
 		desc = getattr(self.voptions, memfunc).desc
+		if attrs.has_key("desc"):
+			attrs.pop("desc")
 		deps = MEMORY_ANALYSIS_DEPENDENCIES[memfunc]
 		for dep in deps:
 			if not clean.has_key(dep):
@@ -425,11 +433,11 @@ class MemoryAnalysis(object):
                 else:
                         analysis_func = self.get_new_objects
 		if not mem_analysis["diffs"].has_key(memfunc):
+			log.info("Running plugin: %s" % memfunc)
                         mem_analysis["diffs"][memfunc] = {"desc" : desc}
 			mem_analysis["diffs"][memfunc]["new"] = analysis_func(clean, new_results, deps, **attrs)
 			mem_analysis["diffs"][memfunc]["deleted"] = analysis_func(new_results, clean, deps, **attrs)
 			mem_analysis["diffs"][memfunc]["star"] = "no"
-
 
 	def run_memory_analysis(self):		
 		"""
@@ -452,9 +460,8 @@ class MemoryAnalysis(object):
 		for mem_analysis_name, dependencies in MEMORY_ANALYSIS_DEPENDENCIES.iteritems():
 			attrs = getattr(self.voptions, mem_analysis_name)
 			if attrs.enabled:
-				log.info("Running plugin: %s" % mem_analysis_name)
 				attrs.pop("enabled")
-				desc = attrs.pop("desc")
+				desc = attrs["desc"]
 				if attrs.has_key("filter"):
 					attrs.pop("filter")
 				if self.is_clean:
@@ -485,7 +492,6 @@ class MemoryAnalysis(object):
 			    if TRIGGER_PLUGINS.has_key(trigger):
 				for plugin in TRIGGER_PLUGINS[trigger]:
 					if not mem_analysis["diffs"].has_key(plugin):
-						log.info("Running plugin: %s" % plugin)
 						self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)			
 					mem_analysis["diffs"][plugin]["star"] = "yes"
 
@@ -512,11 +518,11 @@ class MemoryAnalysis(object):
 							mod_name = mh["module"].split("\\")[-1]
 							dlldump = self.vol.dlldump(dump_dir=dlls_dir, pid=pid, regex=mod_name)
 							mem_analysis["diffs"]["injected_dll"] = {
-                        "new"           : [],
-                        "deleted"       : [],
-                        "star"          : "yes",
-                        "desc"          : "Shows the injected DLL",
-                        }
+                        									"new"           : [],
+                        									"deleted"       : [],
+                        									"star"          : "yes",
+                        									"desc"          : "Shows the injected DLL",
+                        									}
 							if dlldump["data"] != []:
 								mem_analysis["diffs"]["injected_dll"]["new"].append(dlldump["data"][0])	
 			    elif trigger == "VirtualProtectEx":
@@ -534,12 +540,13 @@ class MemoryAnalysis(object):
 				base = int(args["BaseAddress"], 16)
 				
 				new_dlldump = self.vol.dlldump(dump_dir=resdir, pid=pid, base=base)
-				mem_analysis["diffs"]["injected_thread"] = {
-                        "new"           : new_dlldump["data"],
-                        "deleted"       : [],
-                        "star"          : "yes",
-                        "desc"          : "Shows the injected thread",
-                        }
+				mem_analysis["diffs"]["injected_thread"] = \
+					{
+                        		"new"           : new_dlldump["data"],
+                        		"deleted"       : [],
+                        		"star"          : "yes",
+                        		"desc"          : "Shows the injected thread",
+                        		}
 		    	    elif trigger == "NtSetContextThread -> NtResumeThread":
 				pid = str(args["ProcessId"])
 				tid = int(args["ThreadId"])
@@ -556,5 +563,3 @@ class MemoryAnalysis(object):
 				self.get_injected_thread(pid, tid, mem_analysis, dis)
 
 		return mem_analysis, new_results
-
-

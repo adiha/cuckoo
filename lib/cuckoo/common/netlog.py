@@ -36,7 +36,7 @@ from lib.cuckoo.common.exceptions import CuckooResultError
 from lib.cuckoo.common.logtbl import table as LOGTBL
 from lib.cuckoo.common.utils import get_filename_from_path
 from lib.cuckoo.common.config import Config
-from lib.cuckoo.common.constants import CUCKOO_ROOT
+from lib.cuckoo.common.constants import CUCKOO_ROOT, STOP_EVENT
 from lib.cuckoo.common.colors import color, yellow
 
 log = logging.getLogger(__name__)
@@ -44,11 +44,11 @@ log = logging.getLogger(__name__)
 
 # CHANGED: Added this function to enable stopping the analysis machine.
 def set_event():
-	threading.Event("stopevent").set()
+	threading.Event(STOP_EVENT).set()
 
 # CHANGED: Added this function to enable stopping the analysis machine.
 def clear_event():
-	threading.Event("stopevent").clear()
+	threading.Event(STOP_EVENT).clear()
 
 # should probably prettify this
 def expand_format(fs):

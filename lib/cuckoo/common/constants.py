@@ -15,6 +15,10 @@ CUCKOO_GUEST_RUNNING = 0x002
 CUCKOO_GUEST_COMPLETED = 0x003
 CUCKOO_GUEST_FAILED = 0x004
 
+# Changed: Added stop event, AV consts and diff logics consts.
+
+STOP_EVENT = "stopevent"
+
 # Anti-Virus names strings
 AV_NAMES = [
         "AntiVirus",
@@ -266,5 +270,6 @@ TRIGGER_PLUGINS = {
         "SetWinEventHook" : ["diff_eventhooks"],
         "SetWindowsHookExA" : ["diff_messagehooks"],
         "SetWindowsHookExW" : ["diff_messagehooks"],
+	"NtCreateFile" : ["diff_file_handles"]
 }
 

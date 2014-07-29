@@ -19,6 +19,7 @@ from lib.cuckoo.common.constants import CUCKOO_ROOT
 from lib.cuckoo.common.constants import CUCKOO_GUEST_PORT, CUCKOO_GUEST_INIT
 from lib.cuckoo.common.constants import CUCKOO_GUEST_COMPLETED
 from lib.cuckoo.common.constants import CUCKOO_GUEST_FAILED
+from lib.cuckoo.common.constants import STOP_EVENT
 from lib.cuckoo.common.exceptions import CuckooGuestError
 from lib.cuckoo.common.utils import create_dir_safe, TimeoutServer, sanitize_filename, ResumableTimer
 
@@ -181,6 +182,20 @@ class GuestManager:
                                    "networking or try to increase "
                                    "timeout".format(self.id))
 
+    def take_mem_dump(self, dumps_dir, machine, machinery, json_obj):
+	"""
+	Takes memory dump and dumps json info file.
+	"""
+	listdir = sorted(os.listdir(dumps_dir), key=int, reverse=True)
+	if listdir == []:
+		i = 1
+	else:
+		i = int(listdir[0]) + 1
+	dump_dir = os.path.join(dumps_dir, str(i))
+        os.mkdir(dump_dir)
+        machinery.dump_memory(machine.label, os.path.join(dump_dir,"memory.dmp" ))
+        json.dump(json_obj, file(os.path.join(dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
+
     def wait_for_completion(self, machine, storage, machinery):
         """Wait for analysis completion.
         @return: operation status.
@@ -194,11 +209,10 @@ class GuestManager:
         def die():
             abort.set()
 
+	# CHANGED: Added time-based dumps here.
 	resumableTimer = ResumableTimer(self.timeout, die)
 	resumableTimer.start()
-	
 	sec_counter = 0
-	i = 1
 	mem_analysis_conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 	time_to_sleep = int(mem_analysis_conf.time_based.time_to_sleep_before_dump_in_seconds)
         number_of_dumps = int(mem_analysis_conf.basic.max_number_of_dumps)
@@ -207,19 +221,19 @@ class GuestManager:
         create_dir_safe(memory_results_dir)
         create_dir_safe(dumps_dir)
         while True:
+	    if abort.is_set():
+		info_dict = {"trigger": {"name" : "End", "args": {}}, "time" : str(sec_counter)}
+		log.info("Taking dump before termination...")
+		self.take_mem_dump(dumps_dir, machine, machinery, info_dict)
+		raise CuckooGuestError("The analysis hit the critical timeout, terminating")
+	    while Event(STOP_EVENT).is_set():
+	    	time.sleep(0.005)
             time.sleep(1)
 	    sec_counter += 1
 	    if mem_analysis_conf.basic.time_based and sec_counter % time_to_sleep == 0:
                 resumableTimer.stop()
-		dump_dir = os.path.join(dumps_dir, str(i))
-                os.mkdir(dump_dir)
-		log.info("Dumping memory after %d seconds..." % sec_counter)
-                machinery.dump_memory(machine.label,
-                os.path.join(dump_dir,"memory.dmp" ))
-		info_dict = {"trigger": {"name" : "Time", "args": {"interval" : time_to_sleep}}, "time" : str(sec_counter)}
-            	json.dump(info_dict, file(os.path.join(dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
-
-		i += 1
+		info_dict = {"trigger": {"name" : "Time", "args": {"interval" : time_to_sleep}}}
+		self.take_mem_dump(dumps_dir, machine, machinery, info_dict)	
 		resumableTimer.resume()
             try:
                 status = self.server.get_status()
@@ -235,11 +249,15 @@ class GuestManager:
                 error = self.server.get_error()
                 if not error:
                     error = "unknown error"
-
+		info_dict = {"trigger": {"name" : "End", "args": {}}}
+		log.info("Taking dump before termination...")
+	        self.take_mem_dump(dumps_dir, machine, machinery, info_dict)
                 raise CuckooGuestError("Analysis failed: {0}".format(error))
 		# TODO: suspend machine and take dump
             else:
                 log.debug("%s: analysis not completed yet (status=%s)",
                           self.id, status)
-
         self.server._set_timeout(None)
+	log.info("Taking dump before termination...")
+	info_dict = {"trigger": {"name" : "End", "args": {}}}
+        self.take_mem_dump(dumps_dir, machine, machinery, info_dict)

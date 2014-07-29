@@ -277,6 +277,7 @@ class AnalysisManager(Thread):
                 
 	    
 	    # Wait for analysis completion.
+	    time_taken_for_analysis = 0
             try:
                 guest.wait_for_completion(self.machine, self.storage, machinery)
                 succeeded = True
@@ -285,6 +286,7 @@ class AnalysisManager(Thread):
                 succeeded = False
 
         finally:
+	    """
 	    log.info("Taking last dump before terminating...")
 	    mem_dir = os.path.join(self.storage, "memory", "dumps")
             try:
@@ -301,9 +303,9 @@ class AnalysisManager(Thread):
                 pass
             dump_path = os.path.join(mem_dir, dump_dir, "memory.dmp")
 	    machinery.dump_memory(self.machine.label, dump_path)
-	    info_dict = {"trigger": {"name" : "End", "args": {}}, "time" : str((datetime.now() - self.task.started_on).seconds)}
+	    info_dict = {"trigger": {"name" : "End", "args": {}}, "time" : str(time_taken_for_analysis)}
 	    json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
-	    
+	    """
             # Stop Auxiliary modules.
             aux.stop()
 

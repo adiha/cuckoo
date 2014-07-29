@@ -48,14 +48,12 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
     def __init__(self, *args, **kwargs):
         self.cfg = Config()
         self.analysistasks = {}
+        self.tasks = {}
         self.analysishandlers = {}
 
 	# CHANGED: Save info about APIs, BPs and times for each trigger.
-	self.apis = {}
 	self.bps = []
 	self.volshell_bps = []
-	self.times = {}
-	# Initialize times dictionary (for each trigger)
 	self.machinery = None
         try:
             server_addr = self.cfg.resultserver.ip, self.cfg.resultserver.port
@@ -79,31 +77,35 @@ class Resultserver(SocketServer.ThreadingTCPServer, object):
 	self.machinery = machinery
 
     def set_apis(self, id, apis):
-	if not self.apis.has_key(id):
-		self.apis[id] = []
-	self.apis[id] += apis
+	if not self.tasks.has_key(id):
+		self.tasks[id] = {}
+	if not self.tasks[id].has_key("apis"):
+		self.tasks[id]["apis"] = []
+	self.tasks[id]["apis"] += apis
     def get_apis(self,id):
-	for api in self.apis[id]:
+	for api in self.tasks[id]["apis"]:
 		if type(api) != tuple:
-			self.apis[id].remove(api)
-	return self.apis[id]
+			self.tasks[id]["apis"].remove(api)
+	return self.tasks[id]["apis"]
     
     def get_times(self,id, apiname):
-	if not self.times.has_key(id):
-		self.times[id] = {}
+	if not self.tasks.has_key(id):
+                self.tasks[id] = {}
+	if not self.tasks[id].has_key("times"):
+		self.tasks[id]["times"] = {}
 		c = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 		triggers = [t for t in dir(c) if t.startswith("Trigger_")]
 		for trigger in triggers:
 			times = getattr(c, trigger).times
-			self.times[id][trigger.split("Trigger_")[1]] = 1000 if times == 'unlimited' else int(times)
+			self.tasks[id]["times"][trigger.split("Trigger_")[1]] = 1000 if times == 'unlimited' else int(times)
 
-	return self.times[id][apiname]
+	return self.tasks[id]["times"][apiname]
 
     def reduce_times(self, id, apiname):
-	self.times[id][apiname] -= 1
+	self.tasks[id]["times"][apiname] -= 1
 
     def remove_from_apis(self, id, val):
-	self.apis[id] = [v for v in self.apis if not v == val]
+	self.tasks[id]["apis"] = [v for v in self.tasks[id]["apis"] if not v == val]
 
     def set_volshell_bp(self, api):
 	self.volshell_bps.append(api)
@@ -318,7 +320,6 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 	self.server.machinery.resume(machine)
 
     def dump_memory(self, trigger, args):
-	timestamp = (datetime.datetime.now() - self.server.analysistasks.values()[0][0].started_on).seconds
 	conf = Config(os.path.join(CUCKOO_ROOT, "conf", "memoryanalysis.conf"))
 	max_number_of_dumps = int(conf.basic.max_number_of_dumps)
 	chose_triggered = conf.basic.trigger_based
@@ -349,7 +350,7 @@ class Resulthandler(SocketServer.BaseRequestHandler):
 				pass
 			dump_path = os.path.join(mem_dir, dump_dir, "memory.dmp")
 			self.server.machinery.dump_memory(machine, dump_path)
-			info_dict = {"trigger" : {"name" : trigger, "args" : args}, "time": str(timestamp)}
+			info_dict = {"trigger" : {"name" : trigger, "args" : args}}
 			json.dump(info_dict, file(os.path.join(mem_dir, dump_dir, "info.json"),"wb"), sort_keys=False, indent=4)
 		else:
 			log.warn("Reached maximum number of memory dumps. Quitting dump")

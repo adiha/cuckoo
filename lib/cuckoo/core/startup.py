@@ -19,7 +19,7 @@ import modules.reporting
 
 from lib.cuckoo.common.colors import red, green, yellow, cyan
 from lib.cuckoo.common.config import Config
-from lib.cuckoo.common.constants import CUCKOO_ROOT, CUCKOO_VERSION
+from lib.cuckoo.common.constants import CUCKOO_ROOT, CUCKOO_VERSION, STOP_EVENT
 from lib.cuckoo.common.exceptions import CuckooStartupError
 from lib.cuckoo.common.exceptions import CuckooOperationalError
 from lib.cuckoo.common.utils import create_folders
@@ -200,4 +200,4 @@ def init_modules():
             else:
                 log.debug("\t |-- %s", entry.__name__)
     # CHANGED: Added this event.
-    e = threading.Event("stopevent")
+    e = threading.Event(STOP_EVENT)
