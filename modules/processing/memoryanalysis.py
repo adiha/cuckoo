@@ -449,9 +449,9 @@ class MemoryAnalysis(object):
 		new_results = copy.deepcopy(self.results)
 		mem_analysis = {}
 		mem_analysis["diffs"] = {}
-		dlls_dir = os.path.join(os.path.dirname(self.memfile), "dlls")
-                drivers_dir = os.path.join(os.path.dirname(self.memfile), "drivers")
-                malfinds_dir = os.path.join(os.path.dirname(self.memfile), "malfinds")
+		dlls_dir = os.path.join(os.path.dirname(self.memfile), DLLS_DIR)
+                drivers_dir = os.path.join(os.path.dirname(self.memfile), DRIVERS_DIR)
+                malfinds_dir = os.path.join(os.path.dirname(self.memfile), MALFINDS_DIR)
 
 		if not self.is_clean:
                         utils.create_dir_safe(dlls_dir)
@@ -461,7 +461,6 @@ class MemoryAnalysis(object):
 			attrs = getattr(self.voptions, mem_analysis_name)
 			if attrs.enabled:
 				attrs.pop("enabled")
-				desc = attrs["desc"]
 				if attrs.has_key("filter"):
 					attrs.pop("filter")
 				if self.is_clean:
@@ -494,14 +493,9 @@ class MemoryAnalysis(object):
 					if not mem_analysis["diffs"].has_key(plugin):
 						self.run_memory_plugin(mem_analysis, plugin, self.clean_data, new_results)			
 					mem_analysis["diffs"][plugin]["star"] = "yes"
-
-			    if trigger == "monitorCPU":
-				if mem_analysis["diffs"].has_key("diff_heap_entropy"):
-					mem_analysis["diffs"]["diff_heap_entropy"]["star"] = "yes"
 		    	    if trigger == "ZwLoadDriver":
 				patcher_res = self.vol.patcher(os.path.join(CUCKOO_ROOT, "data", "patchers", "patchpe.xml"))
 				# Dump the new driver
-
 				for p in patcher_res["patches"]:
 					log.info("Dumping drive in offset: %d" % p)
 					base = int(p) + 0x7fe00000
@@ -529,9 +523,15 @@ class MemoryAnalysis(object):
 				verbal_protect = PAGE_PROTECTIONS[int(args["Protection"],16)]
 				protect_vad_val = [key for key,val in vadinfo.PROTECT_FLAGS.iteritems() if val == verbal_protect][0]
         			if "EXECUTE" in verbal_protect:
-					mem_analysis["diffs"]["diff_malfind"]["new"].append(self.vol.malfind(dump_dir=malfinds_dir, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
-				else:				
-					mem_analysis["diffs"]["diff_malfind"]["deleted"].append(self.vol.malfind(dump_dir=None, pid=str(args["ProcessId"]), add_data=False, ignore_protect=True, address=int(args["Address"],16))["data"][0])
+					key = "new"
+				else:
+					key = "deleted"
+				mem_analysis["diffs"]["diff_malfind"][key].append( \
+				self.vol.malfind(dump_dir=malfinds_dir, 
+						 pid=str(args["ProcessId"]), 
+						 add_data=False, 
+						 ignore_protect=True, 
+						 address=int(args["Address"],16))["data"][0])
 				mem_analysis["diffs"]["diff_malfind"]["star"] = "yes"
 		    	    elif trigger == "WriteProcessMemory -> CreateRemoteThread -> LoadLibrary":
 			 	resdir = os.path.join(os.path.dirname(self.memfile), "dlls")
@@ -540,12 +540,12 @@ class MemoryAnalysis(object):
 				base = int(args["BaseAddress"], 16)
 				
 				new_dlldump = self.vol.dlldump(dump_dir=resdir, pid=pid, base=base)
-				mem_analysis["diffs"]["injected_thread"] = \
+				mem_analysis["diffs"]["injected_dll"] = \
 					{
                         		"new"           : new_dlldump["data"],
                         		"deleted"       : [],
                         		"star"          : "yes",
-                        		"desc"          : "Shows the injected thread",
+                        		"desc"          : "Shows the injected DLL",
                         		}
 		    	    elif trigger == "NtSetContextThread -> NtResumeThread":
 				pid = str(args["ProcessId"])

@@ -19,6 +19,10 @@ CUCKOO_GUEST_FAILED = 0x004
 
 STOP_EVENT = "stopevent"
 
+DLLS_DIR = "dlls"
+DRIVERS_DIR = "drivers"
+MALFINDS_DIR = "malfinds"
+
 # Anti-Virus names strings
 AV_NAMES = [
         "AntiVirus",
